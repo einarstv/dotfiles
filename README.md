@@ -8,7 +8,7 @@ Each top-level directory is a Stow package that mirrors `$HOME`.
 
 | Package    | Contents |
 |------------|----------|
-| `common/`  | Shared config, used on every machine: `~/.config/hypr/*` (except `monitors.lua`) and `~/.config/omarchy/{backgrounds,branding,defaults,extensions,hooks,plugins,themes,themed}` |
+| `common/`  | Shared config, used on every machine: `~/.config/hypr/*` (except `monitors.lua`), `~/.config/kitty/kitty.conf` and `~/.config/omarchy/{backgrounds,branding,defaults,extensions,hooks,plugins,themes,themed}` |
 | `<host>/`  | Machine-specific files, one package per hostname. Currently `luwei/` with `monitors.lua` |
 
 Rule of thumb: each setting lives in exactly one place. Shared settings go in `common/`; a host package holds only what genuinely differs.
