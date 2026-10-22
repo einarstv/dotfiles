@@ -1,0 +1,13 @@
+name = "mini-orb"
+version = "0.1.0"
+description = "Compact Omarchy-themed circular OSD. Size follows osd.height_px; amber spinner while transcribing."
+compatibility = "voxtype quickshell style packages"
+palette = "omarchy"
+layout = "custom"
+qml_entry = "MiniOrb.qml"
+
+[frame]
+background = "none"
+border = "none"
+glow = false
+halo = false
