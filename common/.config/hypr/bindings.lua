@@ -60,3 +60,14 @@ o.bind("SUPER + SHIFT + ESCAPE", "Screensaver", "omarchy-launch-screensaver")
 
 -- Standard agent on SUPER + A (replaces Select all; Ctrl+A still works).
 o.rebind("SUPER + A", "Agent", "omarchy-agent") -- was: Select all
+
+-- Dictation by language: AltGr = English (whisper small.en), Right Ctrl = Norwegian
+-- (nb-whisper-small). Voxtype constrains language detection to en/no, so the English
+-- key picks 'en' and the Norwegian key picks 'no' per recording.
+-- NB: on the "no" layout the physical AltGr key surfaces as ISO_Level3_Shift, not
+-- Alt_R, so the binding (and the default Omarchy one) must use that keysym.
+hl.unbind("ALT + Alt_R") -- remove the default dictation hold (dead on this layout: keysym never fires)
+hl.unbind("SUPER + CTRL + X") -- was: Toggle dictation
+hl.unbind("F9") -- was: push-to-talk dictation
+o.bind_hold("ISO_Level3_Shift", "Dictate in English (push-to-talk)", "voxtype record start --model small.en", "Stop English dictation (push-to-talk)", "voxtype record stop", { ignore_mods = true })
+o.bind_hold("CTRL + Control_R", "Dictate in Norwegian (push-to-talk)", "voxtype record start", "Stop Norwegian dictation (push-to-talk)", "voxtype record stop", { ignore_mods = true })
