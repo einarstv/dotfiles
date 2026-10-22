@@ -5,11 +5,12 @@ import qs.Ui
 import qs.Commons
 
 // Dictation mic for the two voxtype daemons:
-//   N = Norwegian (voxtype.service)        E = English (voxtype-english.service)
+//   Norwegian = voxtype.service          (hold Right Ctrl)
+//   English   = voxtype-english.service  (hold AltGr)
 // Hidden while both daemons are off. When either is on the mic shows: lit
-// normal at idle, red = recording, amber = transcribing. Click activates
-// English when both are off, otherwise turns all daemons off. Hover shows
-// the state of both.
+// normal at idle, red = recording, amber = transcribing. Hover shows the
+// state of both. Click activates English when both are off, otherwise
+// turns all daemons off.
 
 BarWidget {
   id: root
@@ -34,9 +35,6 @@ BarWidget {
     return anyOn ? "idle" : "stopped"
   }
 
-  readonly property string statusLine: "Norsk: " + (isOn(noState) ? "på" + (noState !== "idle" ? " (" + noState + ")" : "") : "av")
-      + " · Engelsk: " + (isOn(enState) ? "på" + (enState !== "idle" ? " (" + enState + ")" : "") : "av")
-
   function stateColor(s) {
     if (s === "recording" || s === "streaming") return "#f2594d"
     if (s === "transcribing") return "#f2cc4d"
@@ -45,6 +43,13 @@ BarWidget {
 
   function isOn(s) {
     return s === "idle" || s === "recording" || s === "streaming" || s === "transcribing"
+  }
+
+  function stateLabel(s) {
+    if (s === "recording" || s === "streaming") return "recording"
+    if (s === "transcribing") return "writing"
+    if (s === "idle") return "ready"
+    return "off"
   }
 
   FileView {
@@ -76,12 +81,12 @@ BarWidget {
 
     bar: root.bar
     anchors.centerIn: parent
-    fixedWidth: -1
     text: "󰍬"
     active: root.stateColor(root.micState) !== null
     activeColor: root.stateColor(root.micState) ?? "transparent"
-    tooltipText: root.statusLine
-        + (root.anyOn ? " — klikk slår av alt" : " — klikk slår på engelsk")
+    tooltipText: "Norwegian: " + root.stateLabel(root.noState)
+        + " · English: " + root.stateLabel(root.enState)
+        + "\nClick: all off / start English"
     onPressed: function(b) {
       if (b !== Qt.LeftButton) return
       root.bar.run(root.anyOn ? "voxtype-daemon-all off" : "voxtype-daemon-toggle-en")

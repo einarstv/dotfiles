@@ -13,7 +13,7 @@
   },
   "barWidget": {
     "displayName": "VoxType Dictation",
-    "description": "Dictation daemon states, click toggles",
+    "description": "Dictation daemon states with hover info",
     "category": "Status",
     "allowMultiple": false
   }
