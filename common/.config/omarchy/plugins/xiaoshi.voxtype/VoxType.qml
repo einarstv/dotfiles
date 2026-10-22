@@ -5,12 +5,12 @@ import qs.Ui
 import qs.Commons
 
 // Dictation mic for the two voxtype daemons:
-//   Norwegian = voxtype.service          (hold Right Ctrl)
 //   English   = voxtype-english.service  (hold AltGr)
-// Hidden while both daemons are off. When either is on the mic shows: lit
-// normal at idle, red = recording, amber = transcribing. Hover shows the
-// state of both. Click activates English when both are off, otherwise
-// turns all daemons off.
+//   Norwegian = voxtype.service          (hold Right Ctrl)
+// Always visible in the tray: muted glyph, dim while both daemons are off;
+// lit when either is on, red = recording, amber = transcribing. Hover shows
+// the state of both. Click activates English when both are off, otherwise
+// turns all daemons off. Right click toggles the Norwegian daemon.
 
 BarWidget {
   id: root
@@ -72,24 +72,27 @@ BarWidget {
     onFileChanged: reload()
   }
 
-  implicitWidth: root.anyOn ? button.implicitWidth : 0
-  implicitHeight: root.anyOn ? button.implicitHeight : 0
-  visible: root.anyOn
+  implicitWidth: button.implicitWidth
+  implicitHeight: button.implicitHeight
 
   BarIconButton {
     id: button
 
     bar: root.bar
     anchors.centerIn: parent
-    text: "󰍬"
+    text: root.anyOn ? "󰍬" : "󰍭"
     active: root.stateColor(root.micState) !== null
     activeColor: root.stateColor(root.micState) ?? "transparent"
-    tooltipText: "Norwegian: " + root.stateLabel(root.noState)
-        + " · English: " + root.stateLabel(root.enState)
-        + "\nClick: all off / start English"
+    dimmed: !root.anyOn
+    tooltipText: "English: " + root.stateLabel(root.enState)
+        + " · Norwegian: " + root.stateLabel(root.noState)
+        + "\nClick: all off / start English · Right: Norwegian on/off"
     onPressed: function(b) {
-      if (b !== Qt.LeftButton) return
-      root.bar.run(root.anyOn ? "voxtype-daemon-all off" : "voxtype-daemon-toggle-en")
+      if (b === Qt.RightButton) {
+        root.bar.run("voxtype-daemon-toggle-no")
+      } else if (b === Qt.LeftButton) {
+        root.bar.run(root.anyOn ? "voxtype-daemon-all off" : "voxtype-daemon-toggle-en")
+      }
     }
   }
 }
