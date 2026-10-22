@@ -1,0 +1,20 @@
+{
+  "schemaVersion": 1,
+  "id": "xiaoshi.voxtype",
+  "name": "VoxType Dictation",
+  "version": "1.0.0",
+  "author": "xiaoshi",
+  "description": "Dictation mic: hidden when both daemons are off, lit when either is on",
+  "kinds": [
+    "bar-widget"
+  ],
+  "entryPoints": {
+    "barWidget": "VoxType.qml"
+  },
+  "barWidget": {
+    "displayName": "VoxType Dictation",
+    "description": "Dictation daemon states, click toggles",
+    "category": "Status",
+    "allowMultiple": false
+  }
+}

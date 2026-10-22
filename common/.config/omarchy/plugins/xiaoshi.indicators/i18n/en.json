@@ -1,0 +1,12 @@
+{
+  "pomo.focus": "Focus",
+  "pomo.shortBreak": "Short break",
+  "pomo.longBreak": "Long break",
+  "pomo.hint": "Click: start/pause · Right: reset · Middle: skip",
+  "pomo.notifyBreak": "Time for a break",
+  "pomo.notifyLongBreak": "Time for a long break",
+  "pomo.notifyFocus": "Back to focus",
+  "pomo.labelFocus": "F",
+  "pomo.labelBreak": "B",
+  "pomo.labelLongBreak": "LB"
+}
