@@ -1,0 +1,12 @@
+#!/bin/bash
+# Toggle the English dictation daemon (voxtype-english.service).
+
+if systemctl --user is-active --quiet voxtype-english.service; then
+  systemctl --user stop voxtype-english.service
+  omarchy-notification-send -u low "Engelsk diktering: av" \
+    "AltGr gjør ingenting før du slår på igjen (Shift + AltGr)"
+else
+  systemctl --user start voxtype-english.service
+  omarchy-notification-send -u low "Engelsk diktering: på" \
+    "Hold AltGr og snakk engelsk"
+fi

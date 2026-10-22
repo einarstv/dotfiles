@@ -1,0 +1,21 @@
+[Unit]
+Description=Voxtype English dictation daemon
+Documentation=https://voxtype.io
+PartOf=graphical-session.target
+After=graphical-session.target
+
+[Service]
+Type=simple
+# Own runtime dir so the CLI (XDG_RUNTIME_DIR=... voxtype record ...) and the
+# socket/state files never collide with the Norwegian daemon.
+Environment=XDG_RUNTIME_DIR=%t/voxtype-en
+# The override hides the session's real sockets, so link them in: audio
+# (PipeWire via ALSA), Wayland (OSD) and D-Bus all resolve through
+# XDG_RUNTIME_DIR.
+ExecStartPre=/bin/sh -c 'mkdir -p %t/voxtype-en; for f in bus pipewire-0 pipewire-0-manager pulse wayland-1; do ln -sfn "%t/$f" "%t/voxtype-en/$f"; done'
+ExecStart=/usr/bin/voxtype -c %h/.config/voxtype/english.toml daemon
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=graphical-session.target

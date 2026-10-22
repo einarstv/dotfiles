@@ -1,0 +1,25 @@
+#!/bin/bash
+# Push-to-talk on the English dictation daemon (voxtype-english.service).
+# Notifies once if the daemon is toggled off instead of recording.
+
+RT="/run/user/$(id -u)/voxtype-en"
+CFG="$HOME/.config/voxtype/english.toml"
+
+state="$(XDG_RUNTIME_DIR="$RT" voxtype -c "$CFG" status 2>/dev/null)"
+
+case "${1:-}" in
+  start)
+    if [[ $state == idle ]]; then
+      XDG_RUNTIME_DIR="$RT" voxtype -c "$CFG" record start
+    elif [[ $state != recording ]]; then
+      omarchy-notification-send -u low "Engelsk diktering er av" \
+        "Slå på med Shift + AltGr"
+    fi
+    ;;
+  stop)
+    # Silent: the release half only acts if a recording is in flight.
+    if [[ $state == recording ]]; then
+      XDG_RUNTIME_DIR="$RT" voxtype -c "$CFG" record stop
+    fi
+    ;;
+esac

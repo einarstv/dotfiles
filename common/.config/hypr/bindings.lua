@@ -69,5 +69,14 @@ o.rebind("SUPER + A", "Agent", "omarchy-agent") -- was: Select all
 hl.unbind("ALT + Alt_R") -- remove the default dictation hold (dead on this layout: keysym never fires)
 hl.unbind("SUPER + CTRL + X") -- was: Toggle dictation
 hl.unbind("F9") -- was: push-to-talk dictation
-o.bind_hold("ISO_Level3_Shift", "Dictate in English (push-to-talk)", "voxtype record start --model small.en", "Stop English dictation (push-to-talk)", "voxtype record stop", { ignore_mods = true })
-o.bind_hold("CTRL + Control_R", "Dictate in Norwegian (push-to-talk)", "voxtype record start", "Stop Norwegian dictation (push-to-talk)", "voxtype record stop", { ignore_mods = true })
+
+-- Dictation with a deterministic language per key, one daemon per language:
+--   Right Ctrl = Norwegian (voxtype.service,       language = "no",  nb-whisper-small)
+--   AltGr      = English   (voxtype-english.service, language = "en", small.en)
+-- Shift + the same keys toggle each daemon on/off. Masks verified: Hyprland
+-- does not count AltGr (Mod5) in bind masks, so these chords never collide
+-- and no ignore_mods is needed anywhere.
+o.bind_hold("CTRL + Control_R", "Dictate in Norwegian (push-to-talk)", "voxtype record start", "Stop Norwegian dictation (push-to-talk)", "voxtype record stop")
+o.bind_hold("ISO_Level3_Shift", "Dictate in English (push-to-talk)", "voxtype-dictation-en start", "Stop English dictation (push-to-talk)", "voxtype-dictation-en stop")
+o.bind("SHIFT + CTRL + Control_R", "Toggle Norwegian dictation daemon", "voxtype-daemon-toggle-no")
+o.bind("SHIFT + ISO_Level3_Shift", "Toggle English dictation daemon", "voxtype-daemon-toggle-en")

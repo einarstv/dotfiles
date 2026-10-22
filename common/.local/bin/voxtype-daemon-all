@@ -1,0 +1,13 @@
+#!/bin/bash
+# Master switch for both dictation daemons (bar mic icon).
+
+case "${1:-}" in
+  off)
+    systemctl --user stop voxtype.service voxtype-english.service
+    omarchy-notification-send -u low "Diktering: av" "Begge daemoner er stoppet"
+    ;;
+  on)
+    systemctl --user start voxtype.service voxtype-english.service
+    omarchy-notification-send -u low "Diktering: på" "Norsk: Right Ctrl · Engelsk: AltGr"
+    ;;
+esac

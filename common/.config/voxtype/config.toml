@@ -46,13 +46,9 @@ pause_media = true
 # Or provide absolute path to a custom .bin model file
 model = "/home/xiaoshi/.local/share/voxtype/models/nb-whisper-small.bin"
 
-# Language for transcription
-# Use "en" for English, "auto" for auto-detection
-# See: https://github.com/openai/whisper#available-models-and-languages
-language = ["en", "no"]
-
-# Extra models that `voxtype record start --model ...` may use (AltGr = English)
-available_models = ["small.en"]
+# Language for transcription. Fixed "no" — this daemon is the Norwegian
+# dictation (Right Ctrl). English lives in english.toml (AltGr, separate daemon).
+language = "no"
 
 # Translate non-English speech to English
 translate = false
@@ -92,6 +88,12 @@ on_recording_stop = false
 
 # Show notification with transcribed text after transcription completes
 on_transcription = false
+
+[osd]
+frontend = "quickshell"
+layout = "orb"
+height_px = 96
+style = "/home/xiaoshi/.config/voxtype/osd-styles/mini-orb"
 
 # [text]
 # Text processing options (word replacements, spoken punctuation)

@@ -1,0 +1,12 @@
+#!/bin/bash
+# Toggle the Norwegian dictation daemon (voxtype.service).
+
+if systemctl --user is-active --quiet voxtype.service; then
+  systemctl --user stop voxtype.service
+  omarchy-notification-send -u low "Norsk diktering: av" \
+    "Right Ctrl gjør ingenting før du slår på igjen (Shift + Right Ctrl)"
+else
+  systemctl --user start voxtype.service
+  omarchy-notification-send -u low "Norsk diktering: på" \
+    "Hold Right Ctrl og snakk norsk"
+fi
