@@ -1,0 +1,17 @@
+#!/bin/bash
+# Re-apply the current theme's Plymouth boot screen after omarchy updates.
+# Upgrading omarchy-settings-dev overwrites /usr/share/plymouth/themes/omarchy/
+# with packaged defaults, undoing `omarchy plymouth set by theme ...`.
+
+slug=$(cat "$HOME/.local/state/omarchy/current/theme.name" 2>/dev/null)
+[[ -n $slug ]] || exit 0
+
+# Only themes that can style Plymouth (unlock.png + preview-unlock.png).
+theme_dir=$(omarchy theme dir "$slug" 2>/dev/null)
+[[ -n $theme_dir && -f $theme_dir/unlock.png && -f $theme_dir/preview-unlock.png ]] || exit 0
+
+# Already in sync — exit quietly, no sudo prompt.
+[[ $(omarchy plymouth current 2>/dev/null) == "$slug" ]] && exit 0
+
+echo "Plymouth boot screen was reset by the update — re-applying '$slug'..."
+exec omarchy plymouth set by theme "$slug"
