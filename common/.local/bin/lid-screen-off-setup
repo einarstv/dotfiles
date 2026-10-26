@@ -1,0 +1,41 @@
+#!/bin/bash
+
+# Lid close must not suspend the machine: the lid switch binding in
+# ~/.config/hypr/bindings.lua runs the clamshell display handling instead
+# (internal screen off on close, restored on open), and the machine stays awake.
+#
+# Installs /etc/systemd/logind.conf.d/30-lid-screen-off.conf. Idempotent; run
+# once per laptop after stowing the dotfiles.
+
+set -euo pipefail
+
+CONF=/etc/systemd/logind.conf.d/30-lid-screen-off.conf
+
+if [[ ! -d /proc/acpi/button/lid ]]; then
+  echo "No lid on this machine - nothing to do"
+  exit 0
+fi
+
+expected='[Login]
+HandleLidSwitch=ignore
+HandleLidSwitchExternalPower=ignore
+HandleLidSwitchDocked=ignore'
+
+if [[ -f $CONF ]] && [[ $(tail -n 4 "$CONF") == "$expected" ]]; then
+  echo "Already installed: $CONF"
+  exit 0
+fi
+
+sudo tee "$CONF" >/dev/null <<'EOF'
+# Lid close must not suspend the machine - the lid switch binding in
+# ~/.config/hypr/bindings.lua runs the clamshell display handling instead
+# (internal screen off on close, restored on open), and the machine stays awake.
+[Login]
+HandleLidSwitch=ignore
+HandleLidSwitchExternalPower=ignore
+HandleLidSwitchDocked=ignore
+EOF
+
+sudo systemctl daemon-reload
+sudo systemctl reload systemd-logind 2>/dev/null || sudo systemctl kill --signal=HUP systemd-logind
+echo "Installed $CONF (lid no longer suspends)"

@@ -9,7 +9,7 @@ Each top-level directory is a Stow package that mirrors `$HOME`.
 | Package    | Contents |
 |------------|----------|
 | `common/`  | Shared config, used on every machine: `~/.config/hypr/*` (except `monitors.lua`), `~/.config/kitty/kitty.conf` and `~/.config/omarchy/{backgrounds,branding,defaults,extensions,hooks,plugins,themes,themed}` |
-| `<host>/`  | Machine-specific files, one package per hostname. Currently `luwei/` with `monitors.lua` |
+| `<host>/`  | Machine-specific files, one package per hostname. Currently `lisan/` and `luwei/` with `monitors.lua` and `shell.json` |
 
 Rule of thumb: each setting lives in exactly one place. Shared settings go in `common/`; a host package holds only what genuinely differs.
 
@@ -32,6 +32,7 @@ To remove the links: `stow -D --no-folding common "$(hostname)"`.
 2. Create `<hostname>/.config/hypr/monitors.lua` with that machine's monitor setup.
 3. Move any existing `~/.config/hypr/*.lua` files that Stow would replace out of the way (Stow reports conflicts rather than overwriting).
 4. Run the stow command above and reload Hyprland (`hyprctl reload`).
+5. On a laptop, run `~/.local/bin/lid-screen-off-setup` (asks for sudo) so closing the lid turns the screen off instead of suspending.
 
 ## Adding a file
 
@@ -44,7 +45,7 @@ cd ~/dotfiles && stow --no-folding common "$(hostname)"
 
 ## Not tracked
 
-- `~/.config/omarchy/shell.toml` and `shell.json` (`shell.toml` is mode 600 and may hold secrets)
+- `~/.config/omarchy/shell.toml` (mode 600, may hold secrets)
 - `~/.config/omarchy/defaults/dictation.lock` (runtime marker)
 - `~/.config/hypr/bindings.lua.bak.*` (backups)
-- Installed packages and system-level settings (`/etc`, pacman packages)
+- Installed packages and most system-level settings (`/etc`, pacman packages). Exception: laptop lid handling is installed by `common/.local/bin/lid-screen-off-setup`
