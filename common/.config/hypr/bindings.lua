@@ -69,6 +69,10 @@ o.rebind("SUPER + SHIFT + ESCAPE", "Screensaver", "/home/xiaoshi/.local/bin/omar
 -- Standard agent on SUPER + A (replaces Select all; Ctrl+A still works).
 o.rebind("SUPER + A", "Agent", "omarchy-agent") -- was: Select all
 
+-- Move window to scratchpad on SUPER + SHIFT + S (same action as SUPER + ALT + S).
+hl.unbind("SUPER + SHIFT + S") -- was: Google Maps
+o.bind("SUPER + SHIFT + S", "Move window to scratchpad", hl.dsp.window.move({ workspace = "special:scratchpad", follow = false }))
+
 -- YouTube webapp on SUPER + Y (plain SUPER + Y was unbound; moved from SUPER + SHIFT + Y).
 hl.unbind("SUPER + SHIFT + Y") -- was: YouTube
 o.bind("SUPER + Y", "YouTube", { webapp = "https://youtube.com/" })
