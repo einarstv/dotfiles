@@ -17,5 +17,6 @@ ExecStart=/usr/bin/voxtype -c %h/.config/voxtype/english.toml daemon
 Restart=on-failure
 RestartSec=5
 
-[Install]
-WantedBy=graphical-session.target
+# Standard: dictation daemons never auto-start. Start/stop manually with
+# Shift + F9 / Shift + F10 (voxtype-daemon-toggle-en/no) or voxtype-daemon-all.
+# Deliberately no [Install] section — nothing pulls this into a target.

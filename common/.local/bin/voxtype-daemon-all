@@ -8,6 +8,6 @@ case "${1:-}" in
     ;;
   on)
     systemctl --user start voxtype.service voxtype-english.service
-    omarchy-notification-send -u low "Diktering: på" "Norsk: Right Ctrl · Engelsk: AltGr"
+    omarchy-notification-send -u low "Diktering: på" "Engelsk: F9 · Norsk: F10"
     ;;
 esac

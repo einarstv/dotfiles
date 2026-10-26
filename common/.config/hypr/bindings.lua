@@ -55,28 +55,35 @@ hl.unbind("SUPER + M")
 o.rebind("SUPER + T", "Terminal", o.launch_terminal()) -- was: Toggle window floating/tiling
 o.bind("SUPER + SHIFT + T", "Toggle window floating/tiling", hl.dsp.window.float({ action = "toggle" }))
 
+-- Laptop lid: keep Omarchy's clamshell display handling (internal screen off on
+-- close, restored on open) but skip the session lock, so opening the lid goes
+-- straight back to the desktop. Suspend on lid close is disabled separately in
+-- /etc/systemd/logind.conf.d/30-lid-screen-off.conf.
+o.rebind("switch:on:Lid Switch", nil, "omarchy-hyprland-monitor-clamshell", { locked = true })
+
 -- Screensaver; dismissing it lands on the login screen (screensaver-lock-watcher).
-o.bind("SUPER + SHIFT + ESCAPE", "Screensaver", "omarchy-launch-screensaver")
+-- Absolute path: the compositor's PATH prefers /usr/bin over ~/.local/bin, and
+-- this wrapper forces the screensaver into Alacritty while kitty stays default.
+o.rebind("SUPER + SHIFT + ESCAPE", "Screensaver", "/home/xiaoshi/.local/bin/omarchy-launch-screensaver")
 
 -- Standard agent on SUPER + A (replaces Select all; Ctrl+A still works).
 o.rebind("SUPER + A", "Agent", "omarchy-agent") -- was: Select all
 
--- Dictation by language: AltGr = English (whisper small.en), Right Ctrl = Norwegian
--- (nb-whisper-small). Voxtype constrains language detection to en/no, so the English
--- key picks 'en' and the Norwegian key picks 'no' per recording.
--- NB: on the "no" layout the physical AltGr key surfaces as ISO_Level3_Shift, not
--- Alt_R, so the binding (and the default Omarchy one) must use that keysym.
+-- YouTube webapp on SUPER + Y (plain SUPER + Y was unbound; moved from SUPER + SHIFT + Y).
+hl.unbind("SUPER + SHIFT + Y") -- was: YouTube
+o.bind("SUPER + Y", "YouTube", { webapp = "https://youtube.com/" })
+
+-- Dictation by language, one daemon per language:
+--   F9  = English PTT   (voxtype-english.service, language = "en",  small.en)
+--   F10 = Norwegian PTT (voxtype.service,         language = "no",  nb-whisper-small)
+-- Shift + the same keys toggle each daemon. Plain F-keys bind cleanly with
+-- exact masks; modifier keys (Right Ctrl, AltGr) trigger a spurious instant
+-- release in Hyprland that killed recordings at 0.0s.
 hl.unbind("ALT + Alt_R") -- remove the default dictation hold (dead on this layout: keysym never fires)
 hl.unbind("SUPER + CTRL + X") -- was: Toggle dictation
-hl.unbind("F9") -- was: push-to-talk dictation
+hl.unbind("F9") -- was: default push-to-talk dictation (ours is bound below)
 
--- Dictation with a deterministic language per key, one daemon per language:
---   Right Ctrl = Norwegian (voxtype.service,       language = "no",  nb-whisper-small)
---   AltGr      = English   (voxtype-english.service, language = "en", small.en)
--- Shift + the same keys toggle each daemon on/off. Masks verified: Hyprland
--- does not count AltGr (Mod5) in bind masks, so these chords never collide
--- and no ignore_mods is needed anywhere.
-o.bind_hold("CTRL + Control_R", "Dictate in Norwegian (push-to-talk)", "voxtype record start", "Stop Norwegian dictation (push-to-talk)", "voxtype record stop")
-o.bind_hold("ISO_Level3_Shift", "Dictate in English (push-to-talk)", "voxtype-dictation-en start", "Stop English dictation (push-to-talk)", "voxtype-dictation-en stop")
-o.bind("SHIFT + CTRL + Control_R", "Toggle Norwegian dictation daemon", "voxtype-daemon-toggle-no")
-o.bind("SHIFT + ISO_Level3_Shift", "Toggle English dictation daemon", "voxtype-daemon-toggle-en")
+o.bind_hold("F9", "Dictate in English (push-to-talk)", "voxtype-dictation-en start", "Stop English dictation (push-to-talk)", "voxtype-dictation-en stop")
+o.bind_hold("F10", "Dictate in Norwegian (push-to-talk)", "voxtype record start", "Stop Norwegian dictation (push-to-talk)", "voxtype record stop")
+o.bind("SHIFT + F9", "Toggle English dictation daemon", "voxtype-daemon-toggle-en")
+o.bind("SHIFT + F10", "Toggle Norwegian dictation daemon", "voxtype-daemon-toggle-no")
