@@ -1,0 +1,95 @@
+#!/bin/bash
+
+# omarchy:summary=Cycle the active workspace through dwindle, scrolling, floating, and centered master
+# omarchy:args=[back]
+
+# Wraps omarchy-hyprland-workspace-layout-toggle with a centered-master layout
+# added to the cycle, so the hotkey and the bar's layout click both reach it:
+#
+#   forward: dwindle -> scrolling -> floating -> master/center -> dwindle
+#   back:    dwindle -> master/center -> floating -> scrolling -> dwindle
+#
+# The stock script keeps owning the dwindle, scrolling, and floating steps,
+# including their state files and notifications. This wrapper only handles the
+# steps that enter or leave master, which Hyprland reaches through a workspace
+# rule with the master layout and a centered orientation.
+
+DIRECTION=${1:-next}
+if [[ $DIRECTION != "next" && $DIRECTION != "back" ]]; then
+  echo "Usage: omarchy-workspace-layout-toggle-plus [back]" >&2
+  exit 1
+fi
+
+STOCK=/usr/bin/omarchy-hyprland-workspace-layout-toggle
+CURRENT=$(omarchy-hyprland-workspace-layout-current)
+
+# Same replace-in-place notification the stock script uses, so cycling through
+# the layouts still leaves a single, current one.
+notify_layout() {
+  local state="${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/workspace-layout-notification"
+  local last id
+  [[ -r $state ]] && read -r last <"$state"
+  if id=$(omarchy-notification-send -p -r "${last:-0}" -g 󱂬 "$1") && [[ $id =~ ^[0-9]+$ ]]; then
+    mkdir -p "$(dirname "$state")" && printf '%s\n' "$id" >"$state"
+  fi
+}
+
+# Entering master writes the same kind of saved line the stock script writes,
+# plus the orientation. The first line makes the mode readable as "master"
+# even when a default layout is set; the second carries layout and orientation
+# in one workspace rule, so reloads restore exactly what was on screen.
+enter_master() {
+  local ws mode_file apply_mode apply_center
+  ws=$(hyprctl activeworkspace -j | jq -r '.id')
+  # Named workspaces report a negative id; leave those alone, as the stock
+  # script does.
+  [[ $ws =~ ^[0-9]+$ ]] || exit 1
+
+  mode_file="${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/workspace-layouts/$ws.lua"
+  apply_mode="o.workspace_mode({ workspace = \"$ws\", mode = \"master\" })"
+  apply_center="hl.workspace_rule({ workspace = \"$ws\", layout_opts = { orientation = \"center\" } })"
+
+  if ! hyprctl eval "$apply_mode" >/dev/null 2>&1 || ! hyprctl eval "$apply_center" >/dev/null 2>&1; then
+    notify_layout "Centered master needs a reload"
+    exit 1
+  fi
+
+  if mkdir -p "$(dirname "$mode_file")" && printf '%s\n%s\n' "$apply_mode" "$apply_center" >"$mode_file"; then
+    notify_layout "Workspace layout set to centered master"
+  else
+    notify_layout "Centered master set, but not saved"
+  fi
+
+  omarchy-shell -q omarchy.workspaces refresh
+}
+
+case "$DIRECTION" in
+  next)
+    # The stock forward-step from floating lands on dwindle; master comes first.
+    if [[ $CURRENT == "floating" ]]; then
+      enter_master
+      exit
+    fi
+    # From master the stock script's catch-all already cycles onto dwindle.
+    exec "$STOCK" next
+    ;;
+  back)
+    if [[ $CURRENT == "dwindle" ]]; then
+      enter_master
+      exit
+    fi
+    if [[ $CURRENT == "master" ]]; then
+      # Present the workspace as dwindle so the stock back-step lands on
+      # floating; it rewrites the state file as it applies the new mode.
+      ws=$(hyprctl activeworkspace -j | jq -r '.id')
+      [[ $ws =~ ^[0-9]+$ ]] || exit 1
+      mode_file="${XDG_STATE_HOME:-$HOME/.local/state}/omarchy/workspace-layouts/$ws.lua"
+      if mkdir -p "$(dirname "$mode_file")" && printf 'o.workspace_mode({ workspace = "%s", mode = "dwindle" })\n' "$ws" >"$mode_file"; then
+        exec "$STOCK" back
+      fi
+      notify_layout "Centered master needs a reload"
+      exit 1
+    fi
+    exec "$STOCK" back
+    ;;
+esac

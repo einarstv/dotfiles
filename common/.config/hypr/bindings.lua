@@ -40,11 +40,16 @@ o.bind("SUPER + SHIFT + J", "Swap window down", hl.dsp.window.swap({ direction =
 o.bind("SUPER + SHIFT + K", "Swap window up", hl.dsp.window.swap({ direction = "u" }))
 o.bind("SUPER + SHIFT + L", "Swap window right", hl.dsp.window.swap({ direction = "r" })) -- was: Cycle workspace layout
 
--- Toggle window split on SUPER + X (replaces Universal cut; was briefly on SUPER + ALT + J).
-o.rebind("SUPER + X", "Toggle window split", hl.dsp.layout("togglesplit"))
+-- Swap split halves on SUPER + X (replaces Universal cut; was briefly on SUPER + ALT + J).
+o.rebind("SUPER + X", "Swap split halves", hl.dsp.layout("swapsplit"))
+
+-- Toggle window split on SUPER + SHIFT + X (was on SUPER + X; replaces the X webapp).
+o.rebind("SUPER + SHIFT + X", "Toggle window split", hl.dsp.layout("togglesplit"))
 
 -- Cycle workspace layout on SUPER + ALT + L (replaces "Cycle workspace layout back"; was on SUPER + SHIFT + L).
-o.rebind("SUPER + ALT + L", "Cycle workspace layout", "omarchy-hyprland-workspace-layout-toggle")
+-- The wrapper extends Omarchy's dwindle -> scrolling -> floating cycle with a
+-- centered master step (the bar's layout click uses the same wrapper).
+o.rebind("SUPER + ALT + L", "Cycle workspace layout", "omarchy-workspace-layout-toggle-plus")
 
 -- The dock is disabled, so SUPER + M (was: Minimize window to the dock) would
 -- strand windows on the hidden special:minimized workspace with no way back.
