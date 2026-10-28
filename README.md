@@ -34,6 +34,7 @@ To remove the links: `stow -D --no-folding common "$(hostname)"`.
 4. Run the stow command above and reload Hyprland (`hyprctl reload`).
 5. On a laptop, run `~/.local/bin/lid-screen-off-setup` (asks for sudo) so closing the lid turns the screen off instead of suspending.
 6. Install alacritty (`omarchy pkg add alacritty`) — the screensaver wrapper forces the screensaver into Alacritty while kitty stays the default.
+7. Fetch the voxtype dictation models (per-machine downloads, not tracked): `rsync <existing-host>:.local/share/voxtype/models/ ~/.local/share/voxtype/models/` — the daemons need `nb-whisper-small.bin` (Norwegian, F10) and `ggml-small.en.bin` (English, F9). Without them `voxtype.service` crash-loops at login. `voxtype setup` can download them instead.
 
 If Stow reports conflicts for files it once linked (apps rewrote them into real files since), move those files aside and re-run stow rather than using `--adopt` blindly.
 
