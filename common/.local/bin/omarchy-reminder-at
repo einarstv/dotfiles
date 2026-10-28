@@ -1,0 +1,73 @@
+#!/bin/bash
+#
+# omarchy-reminder-at — set an Omarchy reminder for a specific time.
+#
+# Delegates to omarchy-reminder with whole minutes computed from the target
+# time, so the bar indicator, "omarchy reminder show/clear", and the
+# confirmation notification all keep working.
+
+set -euo pipefail
+
+usage() {
+  cat <<'USAGE'
+Usage: omarchy-reminder-at <time> [message...]
+
+Set an Omarchy reminder for a specific time.
+
+Time forms (same as the reminders panel):
+  15:30              today at 15:30 (tomorrow if already passed)
+  9pm, 9:05pm        12-hour clock
+  tomorrow 08:00     explicitly next day
+Anything GNU date understands also works, e.g. "friday 15:00" or
+"2026-10-26 09:00" (those must be in the future).
+
+Examples:
+  omarchy-reminder-at 15:30 "Pick up the kids"
+  omarchy-reminder-at 9:05pm "Take the pizza out"
+  omarchy-reminder-at tomorrow 08:00 "Standup notes"
+USAGE
+}
+
+fail() {
+  echo "omarchy-reminder-at: $*" >&2
+  exit 1
+}
+
+case ${1:-} in
+-h | --help)
+  usage
+  exit 0
+  ;;
+esac
+
+[[ $# -ge 1 && -n ${1:-} ]] || {
+  usage >&2
+  exit 1
+}
+
+when=$1
+shift
+message=("$@")
+
+if ! target=$(date -d "$when" +%s 2>/dev/null); then
+  fail "cannot parse time: $when"
+fi
+
+now=$(date +%s)
+
+# A bare clock time that already passed today means the same time tomorrow.
+if ((target <= now)); then
+  if [[ ${when,,} =~ ^[[:space:]]*[0-9]{1,2}(:[0-9]{2}){0,2}[[:space:]]*(am|pm)?[[:space:]]*$ ]]; then
+    target=$(date -d "tomorrow ${when,,}" +%s 2>/dev/null) || fail "cannot parse time: $when"
+  else
+    fail "that time is already in the past: $when"
+  fi
+fi
+
+((target > now)) || fail "that time is already in the past: $when"
+
+# Round up to whole minutes (never fire early); omarchy-reminder takes minutes.
+minutes=$(((target - now + 59) / 60))
+((minutes >= 1)) || minutes=1
+
+exec omarchy-reminder "$minutes" "${message[@]}"
