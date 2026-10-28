@@ -9,7 +9,7 @@ Each top-level directory is a Stow package that mirrors `$HOME`.
 | Package    | Contents |
 |------------|----------|
 | `common/`  | Shared config, used on every machine: `~/.config/hypr/*` (except `monitors.lua`), `~/.config/kitty/kitty.conf`, `~/.config/omarchy/{backgrounds,branding,defaults,extensions,hooks,plugins,themes,themed}`, `~/.local/bin/` helper scripts (lid, screensaver, voxtype, workspace layout, reminders) and `~/.config/alacritty-screensaver-xdg-terminals.list` |
-| `<host>/`  | Machine-specific files, one package per hostname. Currently `lisan/` and `luwei/` with `monitors.lua` and `shell.json` |
+| `<host>/`  | Machine-specific files, one package per hostname. Currently `lisan/` and `luwei/` with `monitors.lua` and `shell.json` (lisan also has `.local/bin/dock-hub-nosuspend-setup`) |
 
 Rule of thumb: each setting lives in exactly one place. Shared settings go in `common/`; a host package holds only what genuinely differs.
 
@@ -33,8 +33,9 @@ To remove the links: `stow -D --no-folding common "$(hostname)"`.
 3. Move any existing `~/.config/hypr/*.lua` files that Stow would replace out of the way (Stow reports conflicts rather than overwriting).
 4. Run the stow command above and reload Hyprland (`hyprctl reload`).
 5. On a laptop, run `~/.local/bin/lid-screen-off-setup` (asks for sudo) so closing the lid turns the screen off instead of suspending.
-6. Install alacritty (`omarchy pkg add alacritty`) — the screensaver wrapper forces the screensaver into Alacritty while kitty stays the default.
-7. Fetch the voxtype dictation models (per-machine downloads, not tracked): `rsync <existing-host>:.local/share/voxtype/models/ ~/.local/share/voxtype/models/` — the daemons need `nb-whisper-small.bin` (Norwegian, F10) and `ggml-small.en.bin` (English, F9). Without them `voxtype.service` crash-loops at login. `voxtype setup` can download them instead.
+6. On lisan (or any machine using the dock), run `~/.local/bin/dock-hub-nosuspend-setup` (asks for sudo) — when the dock's GenesysLogic USB2 hub autosuspends, its RTL8153 ethernet NIC stalls and drops off the bus, killing all connectivity until it re-enumerates.
+7. Install alacritty (`omarchy pkg add alacritty`) — the screensaver wrapper forces the screensaver into Alacritty while kitty stays the default.
+8. Fetch the voxtype dictation models (per-machine downloads, not tracked): `rsync <existing-host>:.local/share/voxtype/models/ ~/.local/share/voxtype/models/` — the daemons need `nb-whisper-small.bin` (Norwegian, F10) and `ggml-small.en.bin` (English, F9). Without them `voxtype.service` crash-loops at login. `voxtype setup` can download them instead.
 
 If Stow reports conflicts for files it once linked (apps rewrote them into real files since), move those files aside and re-run stow rather than using `--adopt` blindly.
 
@@ -61,4 +62,4 @@ cd ~/dotfiles && stow --no-folding common "$(hostname)"
 - `~/.config/omarchy/shell.toml` (mode 600, may hold secrets)
 - `~/.config/omarchy/defaults/dictation.lock` (runtime marker)
 - `~/.config/hypr/bindings.lua.bak.*` (backups)
-- Installed packages and most system-level settings (`/etc`, pacman packages). Exception: laptop lid handling is installed by `common/.local/bin/lid-screen-off-setup`
+- Installed packages and most system-level settings (`/etc`, pacman packages). Exceptions: laptop lid handling is installed by `common/.local/bin/lid-screen-off-setup`, and lisan's dock hub power rule by `lisan/.local/bin/dock-hub-nosuspend-setup`

@@ -1,0 +1,58 @@
+#!/bin/bash
+
+# The GenesysLogic USB2 hub in the dock is the parent of the RTL8153 ethernet
+# NIC. When the hub autosuspends, the NIC's USB link stalls ("Tx status -71")
+# and the device disconnects, killing all connectivity until it re-enumerates.
+# The NIC itself runs with autosuspend off; this keeps its parent hub awake
+# too. (The lock-time variant of the NIC dropping was separately quirked via
+# usbcore.quirks=0bda:8153:f in /etc/default/limine.)
+#
+# Installs /etc/udev/rules.d/61-usb-dock-hub-nosuspend.rules and applies it
+# live if the hub is currently connected. Idempotent; run once per machine
+# with this dock after stowing the dotfiles.
+
+set -euo pipefail
+
+RULE=/etc/udev/rules.d/61-usb-dock-hub-nosuspend.rules
+
+expected='# The GenesysLogic USB2 hub inside the dock (usb 3-6) is the parent of the
+# RTL8153 ethernet NIC (usb 3-6.4 / enp0s20f0u6u4). When the hub autosuspends,
+# the NIC'"'"'s USB link stalls ("Tx status -71" / error -71) and the device
+# disconnects, killing all connectivity until it re-enumerates (seen repeatedly
+# on 2026-10-28 during active use; the lock-time variant of this was already
+# quirked via usbcore.quirks=0bda:8153:f in /etc/default/limine). The NIC runs
+# with autosuspend off; this keeps its parent hub awake too. Must sort after
+# /usr/lib/udev/rules.d/60-autosuspend.rules, which sets hubs to "auto".
+ACTION=="add|change", SUBSYSTEM=="usb", ATTR{idVendor}=="05e3", ATTR{idProduct}=="0610", TEST=="power/control", ATTR{power/control}="on"'
+
+if [[ -f $RULE ]] && [[ $(<"$RULE") == "$expected" ]]; then
+  echo "Already installed: $RULE"
+else
+  sudo tee "$RULE" >/dev/null <<'EOF'
+# The GenesysLogic USB2 hub inside the dock (usb 3-6) is the parent of the
+# RTL8153 ethernet NIC (usb 3-6.4 / enp0s20f0u6u4). When the hub autosuspends,
+# the NIC's USB link stalls ("Tx status -71" / error -71) and the device
+# disconnects, killing all connectivity until it re-enumerates (seen repeatedly
+# on 2026-10-28 during active use; the lock-time variant of this was already
+# quirked via usbcore.quirks=0bda:8153:f in /etc/default/limine). The NIC runs
+# with autosuspend off; this keeps its parent hub awake too. Must sort after
+# /usr/lib/udev/rules.d/60-autosuspend.rules, which sets hubs to "auto".
+ACTION=="add|change", SUBSYSTEM=="usb", ATTR{idVendor}=="05e3", ATTR{idProduct}=="0610", TEST=="power/control", ATTR{power/control}="on"
+EOF
+  sudo udevadm control --reload
+  echo "Installed $RULE"
+fi
+
+found=0
+for hub in /sys/bus/usb/devices/*; do
+  [[ -f $hub/idVendor ]] || continue
+  [[ $(<"$hub/idVendor") == 05e3 && $(<"$hub/idProduct") == 0610 ]] || continue
+  found=1
+  if [[ $(<"$hub/power/control") == on ]]; then
+    echo "Hub already awake: $hub"
+  else
+    echo on | sudo tee "$hub/power/control" >/dev/null
+    echo "Disabled autosuspend on live hub: $hub"
+  fi
+done
+[[ $found == 1 ]] || echo "Dock hub not currently connected - the rule applies when it is plugged in"
