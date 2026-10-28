@@ -1,0 +1,69 @@
+#!/bin/bash
+# Run the Omarchy screensaver in Alacritty while kitty stays the default terminal.
+#
+# The stock launcher picks its terminal with `xdg-terminal-exec --print-id`.
+# That resolver prefers a ${XDG_CURRENT_DESKTOP}-xdg-terminals.list over the
+# generic xdg-terminals.list in the same config dir, so exporting an
+# otherwise-unused desktop name scopes the swap to this call tree only:
+# the screensaver resolves Alacritty via
+# ~/.config/alacritty-screensaver-xdg-terminals.list, while everything else
+# still opens kitty.
+#
+# Flash mitigation: the lock that follows the screensaver (screensaver-lock-watcher)
+# takes a moment to map its surface, during which the real desktop was exposed.
+# Before the screensaver opens, stage a bland view instead: remember the active
+# workspace, hide the bar, and switch to an empty one. The watcher undoes both
+# underneath the lock, so unlocking reveals the desktop exactly as it was left.
+
+export XDG_CURRENT_DESKTOP="alacritty-screensaver${XDG_CURRENT_DESKTOP:+:$XDG_CURRENT_DESKTOP}"
+
+# Workspace the screensaver transition parks on. Keep it one you leave empty.
+staging_workspace=6
+state_home="${XDG_STATE_HOME:-$HOME/.local/state}/omarchy"
+staging_dir="$state_home/screensaver-flash"
+stay_awake_file="$state_home/indicators/stay-awake"
+
+log() {
+  printf '%s %s\n' "$(date +%H:%M:%S)" "$*" >> "$state_home/screensaver-flash.log"
+}
+
+# The stock launcher's early exits, checked before staging anything, so a
+# launch that never opens a window cannot strand the desktop on the staging view.
+pgrep -f '[o]rg.omarchy.screensaver' && exit 0
+if omarchy-toggle-enabled screensaver-off && [[ $1 != "force" ]]; then
+  exit 1
+fi
+
+# No staging when no lock will follow (stay-awake), or one already has.
+if [[ ! -f $stay_awake_file ]] && [[ $(omarchy-shell lock isLocked 2>/dev/null) != "true" ]]; then
+  saved_workspace=$(hyprctl activeworkspace -j 2>/dev/null | jq -r '.name // empty' 2>/dev/null)
+  # A special workspace (scratchpad) cannot be re-focused by name; skip staging.
+  if [[ -n $saved_workspace && $saved_workspace != special:* ]]; then
+    # Bar away first, then the workspace switch, so the empty workspace is
+    # reached without the bar ever showing on it.
+    hid_bar=false
+    if [[ ! -f $state_home/toggles/bar-off ]]; then
+      omarchy-toggle-bar on
+      hid_bar=true
+    fi
+    hyprctl dispatch "o.workspaces.focus($staging_workspace)" >/dev/null 2>&1
+    sleep 0.25
+    if [[ $(hyprctl activeworkspace -j 2>/dev/null | jq -r '.name // empty' 2>/dev/null) == "$staging_workspace" ]]; then
+      rm -rf -- "$staging_dir"
+      mkdir -p -- "$staging_dir"
+      printf '%s\n' "$saved_workspace" > "$staging_dir/workspace"
+      printf '%s\n' "$staging_workspace" > "$staging_dir/staging-workspace"
+      # Mark that this run hid the bar, so the watcher only brings it back for
+      # hides it owns — a manual hide is never overridden.
+      $hid_bar && touch -- "$staging_dir/bar"
+      log "stage: parked on $staging_workspace (from $saved_workspace, bar=$($hid_bar && echo hidden || echo left))"
+    else
+      # Parking failed: undo the hide and record nothing, so the watcher has
+      # no staging to restore and nothing stays hidden.
+      $hid_bar && omarchy-toggle-bar off
+      log "stage: parking on $staging_workspace failed, staging undone"
+    fi
+  fi
+fi
+
+exec /usr/share/omarchy/bin/omarchy-launch-screensaver "$@"

@@ -1,0 +1,145 @@
+#!/bin/bash
+# Lock the session when the Omarchy screensaver goes away.
+#
+# Watches Hyprland's event stream for the screensaver's window class. When
+# the last screensaver window closes — whether the screensaver was started
+# by the idle timer or launched manually — the session locks, so dismissing
+# the screensaver lands on the login screen.
+#
+# The launcher (~/.local/bin/omarchy-launch-screensaver) stages an empty
+# workspace and hides the bar before the screensaver opens, so the moment
+# between the screensaver closing and the lock mapping shows only wallpaper.
+# That staging is undone here underneath the lock: once the lock surface is
+# secure, the saved workspace is focused and the bar shown, all invisible to
+# the user, so unlocking reveals the desktop exactly as it was left. Both
+# the bar toggle (shell IPC) and the workspace dispatch apply under the
+# lock; a retry loop after unlock finishes the job if either ever defers.
+#
+# Honors the stay-awake switch (SUPER+CTRL+I, "Toggle locking on idle"):
+# while it is on, this watcher does not lock.
+
+set -u
+
+# One watcher per Hyprland instance, even if autostart ever runs twice.
+lockfile="${XDG_RUNTIME_DIR:-/tmp}/screensaver-lock-watcher-${HYPRLAND_INSTANCE_SIGNATURE}.lock"
+exec 9>"$lockfile"
+flock -n 9 || exit 0
+
+state_home="${XDG_STATE_HOME:-$HOME/.local/state}/omarchy"
+stay_awake_file="$state_home/indicators/stay-awake"
+staging_dir="$state_home/screensaver-flash"
+log_file="$state_home/screensaver-flash.log"
+
+log() {
+  printf '%s %s\n' "$(date +%H:%M:%S)" "$*" >> "$log_file"
+}
+
+lock_if_due() {
+  # Already locked (the idle backstop beat us to it) — nothing to do.
+  [[ $(omarchy-shell lock isLocked 2>/dev/null) == "true" ]] && return
+  [[ -f $stay_awake_file ]] && return
+  omarchy system lock
+}
+
+lock_is_secure() {
+  # "secure" means the lock surface is mapped, not merely requested, so
+  # restoring underneath it cannot peek through the lock transition.
+  omarchy-shell lock status 2>/dev/null | jq -e '.secure == true' >/dev/null 2>&1
+}
+
+focus_workspace() {
+  # Hyprland evaluates dispatch arguments as Lua; this is the form Omarchy's
+  # own per-monitor workspace code uses to focus a workspace by name.
+  hyprctl dispatch "hl.dsp.focus({ workspace = \"$1\" })" >/dev/null 2>&1
+}
+
+current_workspace() {
+  hyprctl activeworkspace -j 2>/dev/null | jq -r '.name // empty' 2>/dev/null
+}
+
+restore_staging() {
+  local saved staging current deadline
+  local hid_bar=false
+  [[ -d $staging_dir ]] || return 0
+
+  if [[ ! -f $stay_awake_file ]]; then
+    # Wait for the lock surface, then settle one beat before lifting the
+    # staging, so the switch and the bar never flash through the transition.
+    deadline=$((SECONDS + 6))
+    until lock_is_secure || ((SECONDS >= deadline)); do
+      sleep 0.1
+    done
+    sleep 0.4
+  fi
+  # With stay-awake on there is no lock to hide the restore behind; the
+  # staging is undone right away so the desktop is only briefly parked.
+
+  saved=$(cat "$staging_dir/workspace" 2>/dev/null || true)
+  staging=$(cat "$staging_dir/staging-workspace" 2>/dev/null || true)
+  [[ -f $staging_dir/bar ]] && hid_bar=true
+  rm -rf -- "$staging_dir"
+
+  if $hid_bar && [[ -f $state_home/toggles/bar-off ]]; then
+    omarchy-toggle-bar off
+    log "restore: bar shown"
+  fi
+
+  [[ -n $saved ]] || { log "restore: nothing saved"; return 0; }
+  focus_workspace "$saved"
+  sleep 0.2
+  if [[ $(current_workspace) == "$saved" ]]; then
+    log "restore: workspace $saved landed under lock"
+    return 0
+  fi
+  log "restore: under-lock dispatch did not land"
+
+  [[ -f $stay_awake_file ]] && return 0
+
+  # Wait for the unlock, then finish the job if the workspace is still
+  # parked. Only complete the staging undo — never override a workspace the
+  # user picked after unlocking — and stand down if a new cycle began.
+  deadline=$((SECONDS + 1800))
+  until [[ $(omarchy-shell lock isLocked 2>/dev/null) == "false" ]] || ((SECONDS >= deadline)); do
+    sleep 0.5
+  done
+  for _ in 1 2 3 4 5 6 7 8 9 10; do
+    [[ -d $staging_dir ]] && { log "restore: new cycle began, standing down"; return 0; }
+    current=$(current_workspace)
+    if [[ -n $current && $current == "$saved" ]]; then
+      log "restore: workspace $saved landed after unlock"
+      return 0
+    fi
+    [[ -n $current && $current != "$staging" ]] && { log "restore: user moved to $current, standing down"; return 0; }
+    focus_workspace "$saved"
+    sleep 0.15
+  done
+  log "restore: gave up, workspace is $(current_workspace)"
+}
+
+declare -A windows=()
+
+SOCKET="$XDG_RUNTIME_DIR/hypr/$HYPRLAND_INSTANCE_SIGNATURE/.socket2.sock"
+
+socat -U - "UNIX-CONNECT:$SOCKET" | while IFS= read -r line; do
+  case $line in
+  openwindow\>*)
+    # openwindow>>ADDR,WORKSPACE,CLASS,TITLE
+    rest=${line#openwindow>>}
+    addr=${rest%%,*}
+    rest=${rest#*,}
+    rest=${rest#*,}
+    class=${rest%%,*}
+    [[ $class == org.omarchy.screensaver ]] && windows[$addr]=1
+    ;;
+  closewindow\>*)
+    addr=${line#closewindow>>}
+    if [[ -n ${windows[$addr]:-} ]]; then
+      unset "windows[$addr]"
+      if ((${#windows[@]} == 0)); then
+        lock_if_due
+        restore_staging &
+      fi
+    fi
+    ;;
+  esac
+done
