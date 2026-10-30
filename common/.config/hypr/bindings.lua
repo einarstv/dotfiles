@@ -66,10 +66,10 @@ o.bind("SUPER + SHIFT + T", "Toggle window floating/tiling", hl.dsp.window.float
 -- /etc/systemd/logind.conf.d/30-lid-screen-off.conf.
 o.rebind("switch:on:Lid Switch", nil, "omarchy-hyprland-monitor-clamshell", { locked = true })
 
--- Screensaver; dismissing it lands on the login screen (screensaver-lock-watcher).
--- Absolute path: the compositor's PATH prefers /usr/bin over ~/.local/bin, and
--- this wrapper forces the screensaver into Alacritty while kitty stays default.
-o.rebind("SUPER + SHIFT + ESCAPE", "Screensaver", "/home/xiaoshi/.local/bin/omarchy-launch-screensaver")
+-- Screensaver (stock native launcher). Idle locking is the shell's job:
+-- idle.lock in ~/.config/omarchy/shell.json locks 30s after the screensaver
+-- starts. A manual launch here plays the screensaver without locking on exit.
+o.rebind("SUPER + SHIFT + ESCAPE", "Screensaver", "omarchy-launch-screensaver")
 
 -- Standard agent on SUPER + A (replaces Select all; Ctrl+A still works).
 o.rebind("SUPER + A", "Agent", "omarchy-agent") -- was: Select all

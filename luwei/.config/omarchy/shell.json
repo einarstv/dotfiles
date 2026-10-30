@@ -81,7 +81,7 @@
     "omarchy.reminders"
   ],
   "idle": {
-    "lock": 0,
+    "lock": 630,
     "screensaver": 600
   },
   "plugins": [

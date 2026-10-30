@@ -90,7 +90,7 @@
     "position": "top"
   },
   "idle": {
-    "lock": 0,
+    "lock": 630,
     "screensaver": 600
   },
   "plugins": [],
