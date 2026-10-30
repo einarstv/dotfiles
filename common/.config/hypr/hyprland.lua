@@ -90,7 +90,6 @@ local function qc_apply(monitor)
     -- The rule replace merges with qconsole's, which set no_border, so it
     -- has to be turned back off explicitly.
     no_border = false,
-    on_created_empty = "[workspace special:scratchpad silent] omarchy-agent",
   })
   -- Land the new gaps in this pass rather than a frame later, so an open
   -- console does not visibly resize after it has dropped down.
@@ -98,6 +97,15 @@ local function qc_apply(monitor)
 end
 
 qc_apply()
+
+-- Seed the console the first time it opens. on_created_empty in a workspace
+-- rule is deprecated since Hyprland 0.57; the replacement is a workspace.created
+-- handler that checks the new workspace's .is_empty field.
+hl.on("workspace.created", function(ws)
+  if ws and ws.name == "special:scratchpad" and ws.is_empty then
+    hl.dispatch(hl.dsp.exec_cmd("[workspace special:scratchpad silent] omarchy-agent"))
+  end
+end)
 
 hl.on("monitor.layout_changed", function() qc_apply() end)
 hl.on("monitor.focused", function() qc_apply() end)
