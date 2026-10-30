@@ -1,0 +1,45 @@
+#!/bin/bash
+
+# omarchy-theme-opacity-overlays — keep theme overlays carrying the kitty
+# opacity key that ~/.config/omarchy/themed/kitty.conf.tpl renders as
+# {{ background_opacity }}.
+#
+# Omarchy's glassy toggle otherwise appends a fixed background_opacity 0.65 to
+# the rendered kitty.conf. A theme that sets its own value keeps it, so every
+# theme gets a thin overlay with the key and the theme system owns the value.
+#
+# Overlays are real files on purpose (see the README's Stow-link pitfall):
+# stock colors.toml is copied in and the key appended. Idempotent: an overlay
+# that already has the key is left alone, so hand edits to a theme's colors
+# survive. Re-run after an omarchy update changes stock theme colors, or to
+# cover a theme added since. Stock themes without colors.toml are skipped.
+#
+# Usage: omarchy-theme-opacity-overlays [opacity]   # default 0.65
+
+set -u
+
+OPACITY="${1:-0.65}"
+OVERLAYS_DIR="$HOME/.config/omarchy/themes"
+STOCK_DIR="$OMARCHY_PATH/themes"
+added=0 keyed=0
+
+for stock in "$STOCK_DIR"/*/; do
+  slug=$(basename "$stock")
+  colors="$stock/colors.toml"
+  [[ -f $colors ]] || continue
+
+  overlay="$OVERLAYS_DIR/$slug"
+  if [[ ! -f $overlay/colors.toml ]]; then
+    mkdir -p "$overlay"
+    cp "$colors" "$overlay/colors.toml"
+    printf '\n# Terminal glass opacity, rendered into kitty.conf by the user template.\nbackground_opacity = "%s"\n' "$OPACITY" >>"$overlay/colors.toml"
+    ((added++))
+  elif grep -q '^background_opacity = ' "$overlay/colors.toml"; then
+    ((keyed++))
+  else
+    printf '\n# Terminal glass opacity, rendered into kitty.conf by the user template.\nbackground_opacity = "%s"\n' "$OPACITY" >>"$overlay/colors.toml"
+    ((added++))
+  fi
+done
+
+echo "Theme opacity overlays: $added created, $keyed already keyed (opacity $OPACITY)."
