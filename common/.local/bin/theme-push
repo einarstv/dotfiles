@@ -1,0 +1,252 @@
+#!/bin/bash
+
+# theme-push — Push the current Omarchy theme to NON-Omarchy machines linked via herdr.
+#
+# Complements Omarchy's built-in `omarchy toggle theme sync` (which only works between
+# Omarchy machines): this script themes apps individually on machines that don't run
+# Omarchy, using the artifacts staged by the last `omarchy theme set`.
+#
+# Currently themes:
+#   Claude Code — installs ~/.claude/themes/omarchy.json and force-activates it
+#                 (sets "theme": "custom:omarchy" in settings.json)
+#   Herdr       — rewrites the whole [theme.custom] token section in
+#                 ~/.config/herdr/config.toml from Omarchy's colors.toml, then
+#                 reloads the running herdr server
+#
+# Omarchy machines are skipped automatically (the built-in sync owns those).
+#
+# Runs automatically after every theme change via the theme-set hook
+# (dotfiles: hooks/theme-set.d/20-theme-push), detached, with a single
+# desktop notification for the result. It can also be run by hand.
+#
+# Usage:
+#   theme-push [-n|--dry-run] [-v|--verbose] [--notify] [target ...]
+#
+#   target   SSH target(s) as shown by `herdr machine list`. Defaults to every
+#            enabled herdr machine.
+#   -n       Connect and report what would change, but write nothing.
+#   -v       Print each machine's full output instead of a summary.
+#   --notify Show one desktop notification with the result (success or
+#            failure) once the push finishes. Silent (no notification) if
+#            there is nothing to push.
+#
+# Log: ~/.local/state/omarchy/theme-push.log
+
+set -u
+
+STATE_DIR="$HOME/.local/state/omarchy"
+LOG_PATH="$STATE_DIR/theme-push.log"
+DRY=0
+VERBOSE=0
+NOTIFY=0
+TARGETS=()
+
+usage() {
+  awk 'NR==1{next} /^#/{sub(/^#+ ?/,""); print} !/^#/{exit}' "$0"
+}
+
+for arg in "$@"; do
+  case $arg in
+    -n | --dry-run) DRY=1 ;;
+    -v | --verbose) VERBOSE=1 ;;
+    --notify) NOTIFY=1 ;;
+    -h | --help) usage; exit 0 ;;
+    -*) usage >&2; exit 1 ;;
+    *) TARGETS+=("$arg") ;;
+  esac
+done
+
+# --- Resolve targets -----------------------------------------------------------
+
+if ((${#TARGETS[@]} == 0)); then
+  while IFS=$'\t' read -r _id _label target _session state; do
+    [[ $state == enabled ]] && TARGETS+=("$target")
+  done < <(herdr machine list 2>/dev/null)
+fi
+
+((${#TARGETS[@]} > 0)) || {
+  echo "No enabled herdr machines to push to." >&2
+  exit 0
+}
+
+# Serialize runs so a slow earlier push can never race a later one, and read
+# the staged theme only once the lock is held — a queued run then pushes
+# whichever theme is current by the time it starts, never a stale one.
+exec 9>"${XDG_RUNTIME_DIR:-/tmp}/theme-push.lock"
+flock 9
+
+control_dir="${XDG_RUNTIME_DIR:-/tmp}/theme-push"
+mkdir -m 700 -p "$control_dir"
+
+# --- Read the staged theme and build payloads ----------------------------------
+
+THEME_NAME=$(cat "$STATE_DIR/current/theme.name" 2>/dev/null)
+THEME_DIR="$STATE_DIR/current/theme"
+
+[[ -n $THEME_NAME && -d $THEME_DIR ]] || {
+  echo "No current Omarchy theme found. Run: omarchy theme set <name>" >&2
+  exit 1
+}
+
+# Claude Code theme, base64-encoded so it survives the trip through stdin.
+CLAUDE_B64=""
+[[ -f $THEME_DIR/claude.json ]] && CLAUDE_B64=$(base64 -w0 <"$THEME_DIR/claude.json")
+
+# Herdr [theme.custom] tokens <- colors.toml keys. Parallel arrays keep order.
+map_token=(accent panel_bg sidebar_bg active_row_bg selection_bg surface0 surface1
+  surface_dim overlay0 overlay1 text subtext0 mauve green yellow red blue teal peach)
+map_source=(accent background background lighter_background selection dark_background
+  lighter_background darker_background muted dark_foreground foreground dark_foreground
+  magenta green yellow red blue cyan orange)
+
+COLORS_JSON=""
+if [[ -f $THEME_DIR/colors.toml ]]; then
+  color_of() { sed -n "s/^$1 *= *\"\([^\"]*\)\"/\1/p" "$THEME_DIR/colors.toml" | head -n1; }
+  pairs=()
+  for i in "${!map_token[@]}"; do
+    c=$(color_of "${map_source[$i]}")
+    [[ -n $c ]] && pairs+=("\"${map_token[$i]}\":\"$c\"")
+  done
+  ((${#pairs[@]} > 0)) && COLORS_JSON="{$(IFS=,; echo "${pairs[*]}")}"
+fi
+
+[[ -n $CLAUDE_B64 || -n $COLORS_JSON ]] || {
+  echo "Theme '$THEME_NAME' staged neither claude.json nor colors.toml — nothing to push." >&2
+  exit 1
+}
+
+# --- Notifications ---------------------------------------------------------------
+
+note_send() { # <headline> <body> [urgency] [expire-ms]
+  local headline=$1 body=$2 urgency=${3:-low} expire=${4:--1}
+  if command -v omarchy-notification-send >/dev/null 2>&1; then
+    omarchy-notification-send -g 󰸌 -u "$urgency" -t "$expire" \
+      "$headline" "$body" 2>/dev/null
+  elif command -v notify-send >/dev/null 2>&1; then
+    notify-send -u "$urgency" -t "$expire" -a "theme-push" "$headline" "$body" 2>/dev/null
+  fi
+}
+
+# --- The remote script, assembled locally --------------------------------------
+# Variable assignments are injected first (printf %q), then the static body.
+# Runs under `bash -l -s` so PATH (e.g. ~/.local/bin for herdr) is set remotely.
+remote_script() {
+  printf 'CLAUDE_B64=%q\nDRY=%q\nCOLORS=%q\nTHEME_NAME=%q\n' \
+    "$CLAUDE_B64" "$DRY" "$COLORS_JSON" "$THEME_NAME"
+  cat <<'REMOTE_BODY'
+set -u
+
+# Omarchy machines are owned by omarchy toggle theme sync — never touch them here.
+if command -v omarchy >/dev/null 2>&1; then
+  echo "skipped: Omarchy machine (built-in theme sync owns it)"
+  exit 0
+fi
+
+# --- Claude Code ---------------------------------------------------------------
+if [[ -n ${CLAUDE_B64:-} ]]; then
+  if ((DRY)); then
+    echo "claude: would install theme + activate custom:omarchy"
+  else
+    mkdir -p "$HOME/.claude/themes"
+    if printf '%s' "$CLAUDE_B64" | base64 -d >"$HOME/.claude/themes/omarchy.json" 2>/dev/null ||
+      printf '%s' "$CLAUDE_B64" | base64 -D >"$HOME/.claude/themes/omarchy.json" 2>/dev/null; then
+      echo "claude: theme installed"
+    else
+      echo "claude: failed to decode theme"
+    fi
+    if command -v jq >/dev/null 2>&1; then
+      s="$HOME/.claude/settings.json"
+      if [[ -f $s ]]; then
+        t=$(mktemp "$s.XXXXXX") &&
+          jq '.theme = "custom:omarchy"' "$s" >"$t" && mv "$t" "$s" &&
+          echo "claude: activated"
+      else
+        printf '{ "theme": "custom:omarchy" }\n' >"$s" && echo "claude: settings created + activated"
+      fi
+    else
+      echo "claude: jq missing — theme installed but not activated"
+    fi
+  fi
+fi
+
+# --- Herdr ---------------------------------------------------------------------
+if [[ -n ${COLORS:-} ]]; then
+  if ((DRY)); then
+    echo "herdr: would rewrite [theme.custom] (${#COLORS} bytes of colors) + reload"
+  else
+    COLORS=$COLORS THEME_NAME=$THEME_NAME python3 - <<'PY'
+import json, os, re
+
+colors = json.loads(os.environ["COLORS"])
+path = os.path.expanduser("~/.config/herdr/config.toml")
+os.makedirs(os.path.dirname(path), exist_ok=True)
+
+lines = open(path).read().splitlines() if os.path.exists(path) else []
+
+# Drop any existing [theme.custom] (and [theme.custom.*]) tables wholesale;
+# the whole section is rewritten from the Omarchy theme on every push.
+out, skipping = [], False
+for line in lines:
+    s = line.strip()
+    if re.fullmatch(r"\[\s*theme\.custom(\.\w+)?\s*\]", s):
+        skipping = True
+        continue
+    if skipping:
+        if s.startswith("["):
+            skipping = False  # next table starts; keep its header
+        else:
+            continue          # still inside the old section; drop
+    out.append(line)
+while out and out[-1].strip() == "":
+    out.pop()
+
+header = f"[theme.custom]\n# Managed by theme-push (Omarchy theme: {os.environ.get('THEME_NAME', '?')})\n"
+body = "".join(f'{k} = "{v}"\n' for k, v in colors.items())
+open(path, "w").write(("\n".join(out) + "\n\n" if out else "") + header + body)
+print(f"herdr: wrote {len(colors)} tokens to {path}")
+PY
+    if command -v herdr >/dev/null 2>&1; then
+      herdr server reload-config >/dev/null 2>&1 &&
+        echo "herdr: reloaded" || echo "herdr: server not running — applies on next start"
+    else
+      echo "herdr: not installed — config written for later"
+    fi
+  fi
+fi
+REMOTE_BODY
+}
+
+# --- Push ----------------------------------------------------------------------
+
+summary="theme-push '$THEME_NAME' dry-run=$DRY"
+note_body=""
+all_ok=1
+
+for target in "${TARGETS[@]}"; do
+  # Reuse each authenticated connection for ten idle minutes, so an SSH agent
+  # like 1Password does not need to approve every push. One machine at a time.
+  out=$(remote_script | timeout 60 ssh -o BatchMode=yes -o ConnectTimeout=5 \
+    -o ControlMaster=auto -o ControlPersist=600 -o "ControlPath=$control_dir/%C" \
+    "$target" bash -l -s 2>&1 | grep -v '^$')
+
+  oneline=$(echo "$out" | tr '\n' ';')
+  echo "$(date '+%F %T') $target: ${oneline:-unreachable}" >>"$LOG_PATH"
+  summary+=$'\n'"  $target: ${oneline:-unreachable}"
+  note_body+="$target: ${oneline:-unreachable}"$'\n'
+  ((VERBOSE)) && echo "--- $target ---" && echo "$out"
+
+  if [[ -z $out || $out == *failed* || $out == *unreachable* || $out == *"jq missing"* ]]; then
+    all_ok=0
+  fi
+done
+
+if ((NOTIFY)); then
+  urgency=low
+  headline="Theme synced"
+  (( all_ok )) || { urgency=normal; headline="Theme sync: attention"; }
+  note_body="${note_body%"$'\n'"}" # trim trailing newline
+  (( DRY )) && headline="Theme sync (dry-run)"
+  note_send "$headline" "$note_body" "$urgency" 6000 >/dev/null
+fi
+
+((VERBOSE)) || echo "$summary"

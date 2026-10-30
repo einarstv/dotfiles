@@ -1,0 +1,10 @@
+#!/bin/bash
+# theme-push theme-set hook. Install with: omarchy hook install theme-set hooks/theme-set.d/20-theme-push
+# $1 holds the theme slug. The hook only fires the push off; it does no heavy work
+# and returns immediately, because omarchy-hook runs synchronously inside
+# omarchy theme set. theme-push serializes itself with flock and reads the staged
+# theme once it holds the lock, so a rapid theme switch pushes whichever theme
+# won. Detached via setsid to survive the hook shell. The result arrives as a
+# single desktop notification (--notify); details land in theme-push.log.
+setsid "$HOME/.local/bin/theme-push" --notify \
+  </dev/null >>"$HOME/.local/state/omarchy/theme-push.log" 2>&1 &
