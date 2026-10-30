@@ -73,12 +73,14 @@
   },
   "cloneSourceRestores": [
     "xiaoshi.lock",
-    "xiaoshi.reminders"
+    "xiaoshi.reminders",
+    "xiaoshi.notifications"
   ],
   "disabledPlugins": [
     "omarchy.dock",
     "omarchy.lock",
-    "omarchy.reminders"
+    "omarchy.reminders",
+    "omarchy.notifications"
   ],
   "idle": {
     "lock": 630,
@@ -90,6 +92,9 @@
     },
     {
       "id": "xiaoshi.reminders"
+    },
+    {
+      "id": "xiaoshi.notifications"
     }
   ],
   "version": 1
