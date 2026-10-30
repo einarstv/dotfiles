@@ -8,7 +8,7 @@ Each top-level directory is a Stow package that mirrors `$HOME`.
 
 | Package    | Contents |
 |------------|----------|
-| `common/`  | Shared config, used on every machine: `~/.config/hypr/*` (except `monitors.lua`), `~/.config/kitty/kitty.conf`, `~/.config/omarchy/{backgrounds,branding,defaults,extensions,hooks,plugins,themes,themed}`, `~/.local/bin/` helper scripts (lid, voxtype, workspace layout, reminders) |
+| `common/`  | Shared config, used on every machine: `~/.config/hypr/*` (except `monitors.lua`), `~/.config/kitty/kitty.conf`, `~/.config/omarchy/{backgrounds,branding,defaults,extensions,hooks,plugins,themed}`, `~/.local/bin/` helper scripts (lid, voxtype, workspace layout, reminders) |
 | `<host>/`  | Machine-specific files, one package per hostname. Currently `lisan/` and `luwei/` with `monitors.lua` and `shell.json` (lisan also has `.local/bin/dock-hub-nosuspend-setup`) |
 
 Rule of thumb: each setting lives in exactly one place. Shared settings go in `common/`; a host package holds only what genuinely differs.
@@ -25,6 +25,18 @@ stow --no-folding common "$(hostname)"
 `--no-folding` makes Stow link individual files rather than whole directories, so files created by apps in `~/.config` don't end up inside the repo.
 
 To remove the links: `stow -D --no-folding common "$(hostname)"`.
+
+## Theme overlays: no Stow links
+
+`omarchy theme set` copies `~/.config/omarchy/themes/<name>/` into
+`~/.local/state/omarchy/current/theme/` — a different directory depth. A
+Stow link's relative target dangles there, and one dangling link aborts
+Omarchy's template rendering mid-run (`awk: fatal: cannot redirect`),
+silently skipping every generated config after it alphabetically —
+`kitty.conf` included, leaving the terminal on stock colors (seen
+2026-10-30, via a stowed `lumon/hyprland.lua`). Keep theme overlays to
+real files or absolute symlinks; version their content elsewhere in the
+repo and copy it in.
 
 ## Adding a machine
 
