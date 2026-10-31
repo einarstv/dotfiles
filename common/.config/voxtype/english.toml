@@ -54,6 +54,9 @@ language = "en"
 
 # Translate non-English speech to English
 translate = false
+mode = "remote"
+remote_endpoint = "https://api.groq.com/openai"
+remote_model = "whisper-large-v3-turbo"
 
 # Number of CPU threads for inference (omit for auto-detection)
 # threads = 4
