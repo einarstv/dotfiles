@@ -100,10 +100,10 @@ o.bind("SUPER + SHIFT + S", "Move window to scratchpad", hl.dsp.window.move({ wo
 hl.unbind("SUPER + SHIFT + Y") -- was: YouTube
 o.bind("SUPER + Y", "YouTube", { webapp = "https://youtube.com/" })
 
--- Dictation by language, one daemon per language:
---   Ctrl + AltGr (hold)       = English PTT   (voxtype-english.service, small.en)
---   Shift + AltGr (hold)      = Norwegian PTT (voxtype.service, nb-whisper-small)
---   Shift + F9 / Shift + F10  = toggle each daemon, Shift + F11 = Groq/local
+-- Dictation by language, one daemon per language, remote-only via Groq:
+--   Ctrl + AltGr (hold)       = English PTT   (voxtype-english.service)
+--   Shift + AltGr (hold)      = Norwegian PTT (voxtype.service)
+--   Shift + F9 / Shift + F10  = toggle each daemon
 -- AltGr on the Norwegian layout sends ISO_Level3_Shift (not Alt_R), and
 -- Hyprland does not count Mod5 in bind masks, so both chords bind on the bare
 -- keysym with CTRL / SHIFT masks. Control_R / Shift_R tokens normalize to the
@@ -145,4 +145,3 @@ bind_ptt("CTRL + ISO_Level3_Shift", "Dictate in English (hold Ctrl + AltGr)", "v
 bind_ptt("SHIFT + ISO_Level3_Shift", "Dictate in Norwegian (hold Shift + AltGr)", "voxtype-dictation-no start", "Stop Norwegian dictation", "voxtype-dictation-no stop")
 o.bind("SHIFT + F9", "Toggle English dictation daemon", "voxtype-daemon-toggle-en")
 o.bind("SHIFT + F10", "Toggle Norwegian dictation daemon", "voxtype-daemon-toggle-no")
-o.bind("SHIFT + F11", "Toggle dictation engine (Groq/local)", "voxtype-engine-toggle")

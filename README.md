@@ -46,7 +46,7 @@ repo and copy it in.
 4. Run the stow command above and reload Hyprland (`hyprctl reload`).
 5. On a laptop, run `~/.local/bin/lid-screen-off-setup` (asks for sudo) so closing the lid turns the screen off instead of suspending.
 6. On lisan (or any machine using the dock), run `~/.local/bin/dock-hub-nosuspend-setup` (asks for sudo) — when the dock's GenesysLogic USB2 hub autosuspends, its RTL8153 ethernet NIC stalls and drops off the bus, killing all connectivity until it re-enumerates.
-7. Fetch the voxtype dictation models (per-machine downloads, not tracked): `rsync <existing-host>:.local/share/voxtype/models/ ~/.local/share/voxtype/models/` — the daemons need `nb-whisper-small.bin` (Norwegian, F10) and `ggml-small.en.bin` (English, F9). Without them `voxtype.service` crash-loops at login. `voxtype setup` can download them instead.
+7. VoxType dictation is remote-only via Groq: create `~/.config/voxtype/groq.env` with `VOXTYPE_WHISPER_API_KEY=<key>` (per-machine secret, not tracked). No local models needed.
 
 If Stow reports conflicts for files it once linked (apps rewrote them into real files since), move those files aside and re-run stow rather than using `--adopt` blindly.
 

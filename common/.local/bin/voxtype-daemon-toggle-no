@@ -4,9 +4,9 @@
 if systemctl --user is-active --quiet voxtype.service; then
   systemctl --user stop voxtype.service
   omarchy-notification-send -u low "Norsk diktering: av" \
-    "F10 gjør ingenting før du slår på igjen (Shift + F10)"
+    "Shift + AltGr gjør ingenting før du slår på igjen (Shift + F10)"
 else
   systemctl --user start voxtype.service
   omarchy-notification-send -u low "Norsk diktering: på" \
-    "Hold F10 og snakk norsk"
+    "Hold Shift + AltGr og snakk norsk"
 fi

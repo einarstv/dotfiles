@@ -39,15 +39,7 @@ pause_media = true
 # volume = 0.7
 
 [whisper]
-# Model to use for transcription
-# Options: tiny, tiny.en, base, base.en, small, small.en, medium, medium.en, large-v3, large-v3-turbo
-# .en models are English-only but faster and more accurate for English
-# large-v3-turbo is faster than large-v3 with minimal accuracy loss (recommended for GPU)
-# Or provide absolute path to a custom .bin model file
-model = "/home/xiaoshi/.local/share/voxtype/models/nb-whisper-small.bin"
-
-# Language for transcription. Fixed "no" — this daemon is the Norwegian
-# dictation (Right Ctrl). English lives in english.toml (AltGr, separate daemon).
+# Remote-only transcription via Groq; no local models kept on disk.
 language = "no"
 
 # Translate non-English speech to English
@@ -91,12 +83,6 @@ on_recording_stop = false
 
 # Show notification with transcribed text after transcription completes
 on_transcription = false
-
-[osd]
-frontend = "quickshell"
-layout = "orb"
-height_px = 96
-style = "/home/xiaoshi/.config/voxtype/osd-styles/mini-orb"
 
 # [text]
 # Text processing options (word replacements, spoken punctuation)
