@@ -101,21 +101,24 @@ hl.unbind("SUPER + SHIFT + Y") -- was: YouTube
 o.bind("SUPER + Y", "YouTube", { webapp = "https://youtube.com/" })
 
 -- Dictation by language, one daemon per language:
---   AltGr (hold)              = English PTT   (voxtype-english.service, small.en)
---   Ctrl + AltGr (hold)       = Norwegian PTT (voxtype.service, nb-whisper-small)
+--   Ctrl + AltGr (hold)       = English PTT   (voxtype-english.service, small.en)
+--   Shift + AltGr (hold)      = Norwegian PTT (voxtype.service, nb-whisper-small)
 --   Shift + F9 / Shift + F10  = toggle each daemon, Shift + F11 = Groq/local
 -- AltGr on the Norwegian layout sends ISO_Level3_Shift (not Alt_R), and
--- Hyprland does not count Mod5 in bind masks, so the bare key binds without
--- mods and the chord adds CTRL (either Ctrl key; masks do not split left/right).
+-- Hyprland does not count Mod5 in bind masks, so both chords bind on the bare
+-- keysym with CTRL / SHIFT masks. Control_R / Shift_R tokens normalize to the
+-- generic CTRL / SHIFT masks -- left and right cannot be split here -- so
+-- either hand works for each chord.
 --
 -- Press halves keep exact masks so the two chords stay distinct and are
--- non-consuming so AltGr symbols (@£${[]}|) still reach apps; quick symbol
--- taps record under voxtype's whisper.min_speech_duration_ms and are
--- discarded. Release halves are transparent, ignore mods, and only run after
--- their own press did -- Omarchy's fixed bind_hold pattern, which survives the
--- mask change that used to kill modifier recordings at 0.0s. Hand-rolled
--- because o.bind_hold would ignore mods on the press half too, making English
--- fire under Ctrl+AltGr.
+-- non-consuming so AltGr combos still reach apps: bare AltGr symbols
+-- (@£${[]}|) trigger nothing at all, and Shift+AltGr level-4 symbols (½¼¾¢)
+-- merely blip the Norwegian daemon, discarded under
+-- whisper.min_speech_duration_ms. Release halves are transparent, ignore
+-- mods, and only run after their own press did -- Omarchy's fixed bind_hold
+-- pattern, which survives the mask change that used to kill modifier
+-- recordings at 0.0s. Hand-rolled because o.bind_hold would ignore mods on
+-- the press half too, making both chords fire together.
 local function bind_ptt(keys, press_description, press, release_description, release)
   local held = false
   local function on_press()
@@ -138,8 +141,8 @@ hl.unbind("ALT + Alt_R") -- remove the default dictation hold (dead on this layo
 hl.unbind("SUPER + CTRL + X") -- was: Toggle dictation
 hl.unbind("F9") -- was: default push-to-talk dictation
 
-bind_ptt("ISO_Level3_Shift", "Dictate in English (hold AltGr)", "voxtype-dictation-en start", "Stop English dictation", "voxtype-dictation-en stop")
-bind_ptt("CTRL + ISO_Level3_Shift", "Dictate in Norwegian (hold Ctrl + AltGr)", "voxtype-dictation-no start", "Stop Norwegian dictation", "voxtype-dictation-no stop")
+bind_ptt("CTRL + ISO_Level3_Shift", "Dictate in English (hold Ctrl + AltGr)", "voxtype-dictation-en start", "Stop English dictation", "voxtype-dictation-en stop")
+bind_ptt("SHIFT + ISO_Level3_Shift", "Dictate in Norwegian (hold Shift + AltGr)", "voxtype-dictation-no start", "Stop Norwegian dictation", "voxtype-dictation-no stop")
 o.bind("SHIFT + F9", "Toggle English dictation daemon", "voxtype-daemon-toggle-en")
 o.bind("SHIFT + F10", "Toggle Norwegian dictation daemon", "voxtype-daemon-toggle-no")
 o.bind("SHIFT + F11", "Toggle dictation engine (Groq/local)", "voxtype-engine-toggle")
