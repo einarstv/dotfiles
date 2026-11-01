@@ -1,0 +1,19 @@
+#!/bin/bash
+# Tap-to-talk: toggle recording on the dictation daemon. Used by the
+# Alt + Space chord in tap mode and the bar mic icon. Notifies once if the
+# daemon is stopped instead of recording.
+
+state="$(voxtype status 2>/dev/null)"
+
+case "$state" in
+  idle)
+    voxtype record start
+    ;;
+  recording|streaming)
+    voxtype record stop
+    ;;
+  *)
+    omarchy-notification-send -u low "Dictation is off" \
+      "Turn it on by clicking the mic icon in the bar"
+    ;;
+esac

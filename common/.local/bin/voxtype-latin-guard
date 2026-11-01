@@ -1,0 +1,13 @@
+#!/bin/bash
+# voxtype post-process guard: drop transcriptions that contain non-Latin
+# letters (Whisper auto-detect misfires, e.g. Hebrew on short clips).
+# Printing nothing with output.post_process.fallback_on_empty = false makes
+# voxtype discard the transcription entirely.
+
+text="$(cat)"
+
+if grep -qP '[^\P{L}\p{Latin}]' <<<"$text"; then
+  exit 0
+fi
+
+printf '%s' "$text"

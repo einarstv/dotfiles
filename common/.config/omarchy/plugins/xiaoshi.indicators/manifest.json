@@ -65,6 +65,11 @@
             "value": "StayAwake",
             "label": "Stay awake",
             "description": "Idle lock and screensaver override"
+          },
+          {
+            "value": "VoxType",
+            "label": "Dictation",
+            "description": "VoxType dictation daemon and hotkey mode"
           }
         ]
       },

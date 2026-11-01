@@ -1,0 +1,34 @@
+#!/bin/bash
+# The Alt + Space dictation chord. Mode-aware:
+#   hold (default): press starts the recording, release stops it
+#   tap:           press toggles the recording (delegates to voxtype-dictate)
+# The mode lives in ${XDG_STATE_HOME:-~/.local/state}/voxtype/dictation-mode
+# and is flipped by voxtype-mode-toggle (bar mic icon right click).
+
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/voxtype"
+MODE_FILE="$STATE_DIR/dictation-mode"
+mode="hold"
+[[ -f $MODE_FILE ]] && mode=$(<"$MODE_FILE")
+
+state="$(voxtype status 2>/dev/null)"
+
+case "${1:-}:$mode" in
+  press:hold)
+    if [[ $state == idle ]]; then
+      voxtype record start
+    elif [[ -z $state ]]; then
+      omarchy-notification-send -u low "Dictation is off" \
+        "Start it with: systemctl --user start voxtype"
+    fi
+    ;;
+  release:hold)
+    # Only acts if a recording is actually in flight.
+    [[ $state == recording || $state == streaming ]] && voxtype record stop
+    ;;
+  press:tap)
+    exec "$HOME/.local/bin/voxtype-dictate"
+    ;;
+  release:tap)
+    : # tap mode: the release half does nothing
+    ;;
+esac

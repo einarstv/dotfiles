@@ -1,0 +1,55 @@
+#!/bin/bash
+# Switch the dictation daemon between pinned Norwegian and English — one
+# daemon at a time. Swaps whisper.language plus a matching initial_prompt in
+# ~/.config/voxtype/config.toml (voxtype config set keeps comments) and
+# restarts voxtype.service to apply (~0.4s). A pinned language code means
+# Whisper's language ID can never land on Swedish (or Danish, Hebrew, ...).
+#
+# Usage: voxtype-lang           toggle no <-> en
+#        voxtype-lang no|en     switch explicitly
+#
+# Bound to SHIFT + ALT + SPACE. If the daemon is stopped, only the config is
+# switched; it comes up in the new language when started again.
+
+set -euo pipefail
+
+PROMPT_NO="Dette er diktat på norsk bokmål — æ ø å, jeg, ikke, hva, når, selv, også."
+PROMPT_EN="This is English dictation — proper capitalization, spelling, and punctuation."
+
+arg="${1:-toggle}"
+current="$(voxtype config get whisper.language)"
+
+case "$arg" in
+  toggle) [[ $current == en ]] && target=no || target=en ;;
+  no|en)  target="$arg" ;;
+  *) echo "Usage: voxtype-lang [no|en]" >&2; exit 1 ;;
+esac
+
+# Never restart out from under a live recording.
+state="$(voxtype status 2>/dev/null || true)"
+case "$state" in
+  recording|streaming|transcribing)
+    omarchy-notification-send -u low "Dictation: can't switch language now" \
+      "Stop the recording first — release the key and wait for the text"
+    exit 0
+    ;;
+esac
+
+if [[ $target == no ]]; then
+  prompt="$PROMPT_NO"
+else
+  prompt="$PROMPT_EN"
+fi
+
+voxtype config set whisper.language "$target" >/dev/null
+voxtype config set whisper.initial_prompt "$prompt" >/dev/null
+
+systemctl --user is-active --quiet voxtype.service && systemctl --user restart voxtype.service
+
+if [[ $target == no ]]; then
+  label="Norwegian"
+else
+  label="English"
+fi
+omarchy-notification-send -u low "Dictation: $label" \
+  "Hold Alt + Space and speak"

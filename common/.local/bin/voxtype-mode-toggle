@@ -1,0 +1,21 @@
+#!/bin/bash
+# Toggle the dictation chord between hold-to-speak (default) and
+# tap-to-speak. Bar mic icon right click.
+
+STATE_DIR="${XDG_STATE_HOME:-$HOME/.local/state}/voxtype"
+MODE_FILE="$STATE_DIR/dictation-mode"
+mode="hold"
+[[ -f $MODE_FILE ]] && mode=$(<"$MODE_FILE")
+
+if [[ $mode == hold ]]; then
+  mode=tap
+  omarchy-notification-send -u low "Dictation: tap to speak" \
+    "Press Alt + Space to start, press again to stop"
+else
+  mode=hold
+  omarchy-notification-send -u low "Dictation: hold to speak" \
+    "Hold Alt + Space while you speak, release to transcribe"
+fi
+
+mkdir -p "$STATE_DIR"
+printf '%s' "$mode" > "$MODE_FILE"

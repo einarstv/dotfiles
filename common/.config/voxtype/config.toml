@@ -40,13 +40,21 @@ pause_media = true
 
 [whisper]
 # Remote-only transcription via Groq; no local models kept on disk.
-language = "no"
+# Explicit auto-detect per recording: the built-in default is "en", which
+# force-decodes Norwegian speech into English.
+language = "auto"
 
 # Translate non-English speech to English
 translate = false
 mode = "remote"
 remote_endpoint = "https://api.groq.com/openai"
-remote_model = "whisper-large-v3-turbo"
+# Full large-v3, not turbo: turbo's weaker language detection tends to
+# translate unpinned non-English speech into English.
+remote_model = "whisper-large-v3"
+
+# Bias decoding toward the two languages we actually dictate; unprompted
+# language ID occasionally misfires wildly (e.g. Hebrew) on short clips.
+initial_prompt = "Dette er diktat på norsk eller engelsk — Norwegian or English dictation."
 
 # Number of CPU threads for inference (omit for auto-detection)
 # threads = 4
@@ -73,6 +81,14 @@ type_delay_ms = 1
 # [output.post_process]
 # command = "ollama run llama3.2:1b 'Clean up this dictation. Fix grammar, remove filler words. Output only the cleaned text:'"
 # timeout_ms = 30000  # 30 second timeout (generous for LLM)
+
+[output.post_process]
+# Drop non-Latin-script transcriptions (Whisper language-ID misfires, e.g.
+# Hebrew on short clips): the guard prints nothing and fallback_on_empty =
+# false discards the transcription instead of typing garbage.
+command = "/home/xiaoshi/.local/bin/voxtype-latin-guard"
+timeout_ms = 3000
+fallback_on_empty = false
 
 [output.notification]
 # Show notification when recording starts (hotkey pressed)

@@ -100,48 +100,26 @@ o.bind("SUPER + SHIFT + S", "Move window to scratchpad", hl.dsp.window.move({ wo
 hl.unbind("SUPER + SHIFT + Y") -- was: YouTube
 o.bind("SUPER + Y", "YouTube", { webapp = "https://youtube.com/" })
 
--- Dictation by language, one daemon per language, remote-only via Groq:
---   Ctrl + AltGr (hold)       = English PTT   (voxtype-english.service)
---   Shift + AltGr (hold)      = Norwegian PTT (voxtype.service)
---   Shift + F9 / Shift + F10  = toggle each daemon
--- AltGr on the Norwegian layout sends ISO_Level3_Shift (not Alt_R), and
--- Hyprland does not count Mod5 in bind masks, so both chords bind on the bare
--- keysym with CTRL / SHIFT masks. Control_R / Shift_R tokens normalize to the
--- generic CTRL / SHIFT masks -- left and right cannot be split here -- so
--- either hand works for each chord.
---
--- Press halves keep exact masks so the two chords stay distinct and are
--- non-consuming so AltGr combos still reach apps: bare AltGr symbols
--- (@£${[]}|) trigger nothing at all, and Shift+AltGr level-4 symbols (½¼¾¢)
--- merely blip the Norwegian daemon, discarded under
--- whisper.min_speech_duration_ms. Release halves are transparent, ignore
--- mods, and only run after their own press did -- Omarchy's fixed bind_hold
--- pattern, which survives the mask change that used to kill modifier
--- recordings at 0.0s. Hand-rolled because o.bind_hold would ignore mods on
--- the press half too, making both chords fire together.
-local function bind_ptt(keys, press_description, press, release_description, release)
-  local held = false
-  local function on_press()
-    held = true
-    hl.exec_cmd(press)
-  end
-  local function on_release()
-    if held then
-      held = false
-      hl.exec_cmd(release)
-    end
-  end
-  o.bind_commands[on_press] = press
-  o.bind_commands[on_release] = release
-  o.bind(keys, press_description, on_press, { non_consuming = true })
-  o.bind(keys, release_description, on_release, { release = true, transparent = true, ignore_mods = true, non_consuming = true })
-end
-
+-- Dictation: one daemon, one mode-aware key, one pinned language.
+-- ALT + SPACE records while held (default) or toggles on tap, per the mode
+-- file flipped by the bar mic icon's right click (voxtype-chord /
+-- voxtype-mode-toggle); the icon's click always toggles recording. The
+-- daemon's language is PINNED in ~/.config/voxtype/config.toml (no Swedish
+-- misfires from auto-detect) and switched Norwegian <-> English by
+-- SHIFT + ALT + SPACE (voxtype-lang), which swaps language + prompt and
+-- restarts voxtype.service (~0.4s). voxtype.service starts with the session.
+-- voxtype-chord itself reads the mode file, so o.bind_hold's press/release
+-- halves are all it takes; the same installed-backend guard as Omarchy's
+-- own dictation keys.
 hl.unbind("ALT + Alt_R") -- remove the default dictation hold (dead on this layout: keysym never fires)
 hl.unbind("SUPER + CTRL + X") -- was: Toggle dictation
 hl.unbind("F9") -- was: default push-to-talk dictation
+hl.unbind("ALT + SPACE") -- was: Toggle dictation (default tap-to-speak; rebound as the chord below)
 
-bind_ptt("CTRL + ISO_Level3_Shift", "Dictate in English (hold Ctrl + AltGr)", "voxtype-dictation-en start", "Stop English dictation", "voxtype-dictation-en stop")
-bind_ptt("SHIFT + ISO_Level3_Shift", "Dictate in Norwegian (hold Shift + AltGr)", "voxtype-dictation-no start", "Stop Norwegian dictation", "voxtype-dictation-no stop")
-o.bind("SHIFT + F9", "Toggle English dictation daemon", "voxtype-daemon-toggle-en")
-o.bind("SHIFT + F10", "Toggle Norwegian dictation daemon", "voxtype-daemon-toggle-no")
+if o.dictation_installed and o.dictation_installed() then
+  o.bind_hold("ALT + SPACE", "Dictate (hold to speak, or tap in tap mode)", "voxtype-chord press", "Stop dictation (hold mode)", "voxtype-chord release")
+end
+
+-- Switch the daemon's pinned dictation language Norwegian <-> English
+-- (voxtype-lang swaps whisper.language + prompt and restarts the daemon).
+o.bind("SHIFT + ALT + SPACE", "Toggle dictation language (Norwegian/English)", "voxtype-lang")

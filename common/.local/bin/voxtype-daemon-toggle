@@ -1,0 +1,20 @@
+#!/bin/bash
+# Toggle the dictation daemon (voxtype.service). Right click on the bar mic
+# icon. Stopping it makes the Alt + Space tap do nothing (notified once by
+# voxtype-dictate); starting it is instant (~0.4s to ready).
+
+if systemctl --user is-active --quiet voxtype.service; then
+  systemctl --user stop voxtype.service
+  omarchy-notification-send -u low "Dictation: off" \
+    "Alt + Space does nothing until you turn it back on (click the mic icon)"
+else
+  systemctl --user start voxtype.service
+  lang="$(voxtype config get whisper.language)"
+  if [[ $lang == en ]]; then
+    omarchy-notification-send -u low "Dictation: on — English" \
+      "Hold Alt + Space and speak (Shift + Alt + Space for Norwegian)"
+  else
+    omarchy-notification-send -u low "Dictation: on — Norwegian" \
+      "Hold Alt + Space and speak (Shift + Alt + Space for English)"
+  fi
+fi
