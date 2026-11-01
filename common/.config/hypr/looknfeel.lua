@@ -56,6 +56,18 @@ hl.config({
   },
 })
 
+-- Animate workspace switches: slide a short distance while fading
+-- (slidefade 20%), snappy at ~400ms. Omarchy disables this by default.
+-- Styles: slide, slidevert, fade, slidefade N%, slidefadevert N%
+-- https://wiki.hypr.land/configuring/core/animations/
+hl.animation({
+  leaf = "workspaces",
+  enabled = true,
+  speed = 4,
+  bezier = "easeOutQuint",
+  style = "slidefade 20%",
+})
+
 -- On the 5120x1440 ultrawide, keep a single window to about half the
 -- monitor width (2560x1440 == 16:9) instead of stretching edge to edge.
 hl.config({

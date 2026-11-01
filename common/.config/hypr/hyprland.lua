@@ -28,6 +28,11 @@ require("default.hypr.toggles")
 -- Add any other personal Hyprland configuration below.
 -- o.window("qemu", { workspace = "5" })
 
+-- Nautilus stays opaque even in Glassy Windows mode: the toggle file and the
+-- default rules make it see-through, and this rule loads after both, so its
+-- absolute opacity wins ("override" beats the earlier multiplied values).
+o.window("org\\.gnome\\.Nautilus", { opacity = "1 override 1 override" })
+
 -- Quake console (Super+S): drop the panel below the bar with a margin and
 -- give it a border, instead of the flush, borderless default.
 --
