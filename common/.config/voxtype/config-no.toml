@@ -1,7 +1,9 @@
-# Voxtype Configuration
+# Voxtype Configuration — Norwegian variant (config-no.toml)
 #
-# Location: ~/.config/voxtype/config.toml
-# All settings can be overridden via CLI flags
+# voxtype-lang copies the chosen variant to ~/.config/voxtype/config.toml
+# (the daemon's config), which is generated state and not tracked. The
+# English variant lives in config-en.toml. All settings can be overridden
+# via CLI flags.
 #
 # State file for external integrations (Waybar, polybar, etc.)
 # Use "auto" for default location ($XDG_RUNTIME_DIR/voxtype/state),
@@ -40,9 +42,11 @@ pause_media = true
 
 [whisper]
 # Remote-only transcription via Groq; no local models kept on disk.
-# Explicit auto-detect per recording: the built-in default is "en", which
-# force-decodes Norwegian speech into English.
-language = "auto"
+# Pinned "no": a fixed code makes it impossible for language ID to pick
+# Swedish (or anything else) — the reason auto-detect had to go. Switching
+# languages (voxtype-lang, Shift + Alt + Space) copies the other variant
+# over the active config and restarts the daemon.
+language = "no"
 
 # Translate non-English speech to English
 translate = false
@@ -52,9 +56,9 @@ remote_endpoint = "https://api.groq.com/openai"
 # translate unpinned non-English speech into English.
 remote_model = "whisper-large-v3"
 
-# Bias decoding toward the two languages we actually dictate; unprompted
-# language ID occasionally misfires wildly (e.g. Hebrew) on short clips.
-initial_prompt = "Dette er diktat på norsk eller engelsk — Norwegian or English dictation."
+# Orthography bias for Norwegian: æ ø å words (the en variant biases for
+# capitalization/punctuation habits instead).
+initial_prompt = "Dette er diktat på norsk bokmål — æ ø å, jeg, ikke, hva, når, selv, også."
 
 # Number of CPU threads for inference (omit for auto-detection)
 # threads = 4
@@ -69,7 +73,7 @@ mode = "type"
 fallback_to_clipboard = true
 
 # Delay between typed characters in milliseconds
-# 0 = fastest possible, increase if characters are dropped
+# 0 = fastest, increase if characters are dropped
 type_delay_ms = 1
 
 # Post-processing command (optional)
@@ -80,7 +84,7 @@ type_delay_ms = 1
 #
 # [output.post_process]
 # command = "ollama run llama3.2:1b 'Clean up this dictation. Fix grammar, remove filler words. Output only the cleaned text:'"
-# timeout_ms = 30000  # 30 second timeout (generous for LLM)
+# timeout_ms = 30000  # 30 second timeout (generous for LLM-based cleanup)
 
 [output.post_process]
 # Drop non-Latin-script transcriptions (Whisper language-ID misfires, e.g.

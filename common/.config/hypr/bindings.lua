@@ -104,10 +104,11 @@ o.bind("SUPER + Y", "YouTube", { webapp = "https://youtube.com/" })
 -- ALT + SPACE records while held (default) or toggles on tap, per the mode
 -- file flipped by the bar mic icon's right click (voxtype-chord /
 -- voxtype-mode-toggle); the icon's click always toggles recording. The
--- daemon's language is PINNED in ~/.config/voxtype/config.toml (no Swedish
+-- daemon's language is PINNED per variant in config-{no,en}.toml (no Swedish
 -- misfires from auto-detect) and switched Norwegian <-> English by
--- SHIFT + ALT + SPACE (voxtype-lang), which swaps language + prompt and
--- restarts voxtype.service (~0.4s). voxtype.service starts with the session.
+-- SHIFT + ALT + SPACE (voxtype-lang), which copies the variant over the
+-- active config.toml and restarts voxtype.service (~0.4s). voxtype.service
+-- starts with the session.
 -- voxtype-chord itself reads the mode file, so o.bind_hold's press/release
 -- halves are all it takes; the same installed-backend guard as Omarchy's
 -- own dictation keys.

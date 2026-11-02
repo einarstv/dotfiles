@@ -1,5 +1,5 @@
 [Unit]
-Description=Voxtype dictation daemon (auto language via Groq)
+Description=Voxtype dictation daemon (pinned language via Groq)
 Documentation=https://voxtype.io
 # No PartOf=graphical-session.target: it propagates stops whenever the
 # session target restarts (e.g. omarchy restart shell), silently killing
@@ -9,6 +9,10 @@ After=graphical-session.target
 [Service]
 Type=simple
 EnvironmentFile=%h/.config/voxtype/groq.env
+# Seed the active config from the Norwegian variant on a fresh deploy.
+# -n (no-clobber): restarts must never reset the language voxtype-lang last
+# picked — config.toml is generated state, the variants are the truth.
+ExecStartPre=/usr/bin/cp -n %h/.config/voxtype/config-no.toml %h/.config/voxtype/config.toml
 ExecStart=/usr/bin/voxtype daemon
 Restart=on-failure
 RestartSec=5

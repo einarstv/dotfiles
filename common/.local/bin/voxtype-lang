@@ -1,20 +1,22 @@
 #!/bin/bash
 # Switch the dictation daemon between pinned Norwegian and English — one
-# daemon at a time. Swaps whisper.language plus a matching initial_prompt in
-# ~/.config/voxtype/config.toml (voxtype config set keeps comments) and
-# restarts voxtype.service to apply (~0.4s). A pinned language code means
-# Whisper's language ID can never land on Swedish (or Danish, Hebrew, ...).
+# daemon, two complete configs. Copies config-no.toml / config-en.toml
+# (both straight from the dotfiles, symlinked into ~/.config/voxtype/)
+# over config.toml and restarts voxtype.service to apply (~0.4s). The
+# active config.toml is generated state, so the tracked variants never
+# mutate — nothing to drift. A pinned language code means Whisper's
+# language ID can never land on Swedish (or Danish, Hebrew, ...), and the
+# copy lands on the same inode the bar indicator's FileView watches.
 #
 # Usage: voxtype-lang           toggle no <-> en
 #        voxtype-lang no|en     switch explicitly
 #
-# Bound to SHIFT + ALT + SPACE. If the daemon is stopped, only the config is
-# switched; it comes up in the new language when started again.
+# Bound to SHIFT + ALT + SPACE. If the daemon is stopped, only the config
+# is switched; it comes up in the new language when started again.
 
 set -euo pipefail
 
-PROMPT_NO="Dette er diktat på norsk bokmål — æ ø å, jeg, ikke, hva, når, selv, også."
-PROMPT_EN="This is English dictation — proper capitalization, spelling, and punctuation."
+CFG_DIR="$HOME/.config/voxtype"
 
 arg="${1:-toggle}"
 current="$(voxtype config get whisper.language)"
@@ -35,14 +37,7 @@ case "$state" in
     ;;
 esac
 
-if [[ $target == no ]]; then
-  prompt="$PROMPT_NO"
-else
-  prompt="$PROMPT_EN"
-fi
-
-voxtype config set whisper.language "$target" >/dev/null
-voxtype config set whisper.initial_prompt "$prompt" >/dev/null
+cp "$CFG_DIR/config-$target.toml" "$CFG_DIR/config.toml"
 
 systemctl --user is-active --quiet voxtype.service && systemctl --user restart voxtype.service
 
