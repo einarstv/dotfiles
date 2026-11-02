@@ -1,0 +1,5 @@
+# Never Stow-link the host shell.json: Omarchy rewrites the live file with
+# atomic rename() writes, which would replace the link with a plain file
+# (seen 2026-11-02). The repo copy is a record synced by .githooks/pre-commit.
+# Unanchored on purpose: stow matches paths with a package-relative prefix.
+\.config/omarchy/shell\.json$

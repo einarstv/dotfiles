@@ -76,9 +76,18 @@ a plain file and leaves the repo copy stale (seen 2026-11-02: the `glassy`
 bar background and `xiaoshi.lock` enable existed only in the live file).
 
 So `<host>/.config/omarchy/shell.json` is a synced record, not a link:
-`.githooks/pre-commit` copies the live file in and stages it, so every
-commit snapshots the config the machine actually runs. Activate per
-machine:
+`.githooks/pre-commit` compares the repo copy against the live file
+(semantically — Omarchy re-serializes key order, so byte drift alone is
+re-recorded without comment) and **stops the commit on real drift**,
+printing the diff. Record the current live config explicitly:
+
+```sh
+~/dotfiles/.githooks/pre-commit --sync
+```
+
+Activate the hook per machine, and keep the stow-side guard that stops a
+re-stow from ever linking the file (each host package needs the ignore;
+see `lisan/.stow-local-ignore`):
 
 ```sh
 git config core.hooksPath .githooks

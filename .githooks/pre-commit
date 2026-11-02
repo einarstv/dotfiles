@@ -1,9 +1,11 @@
 #!/bin/bash
-# Sync the live shell.json into this host's stow package before committing,
-# so every commit snapshots the config Omarchy actually runs. The repo copy
-# is a synced record, not a Stow link: Omarchy persists shell.json with
-# atomic temp-file-plus-rename writes, and rename() replaces a symlink
-# instead of following it. See README "shell.json: synced at commit time".
+# Verify the repo's <host>/shell.json matches the live one before committing.
+# On drift the commit is stopped; record the current live config explicitly:
+#   .githooks/pre-commit --sync
+# The repo copy is a synced record, never a Stow link: Omarchy persists
+# shell.json with atomic temp-file-plus-rename writes, and rename() replaces
+# a symlink instead of following it. See README "shell.json: synced at commit
+# time" and lisan/.stow-local-ignore.
 
 set -euo pipefail
 
@@ -12,15 +14,38 @@ host=$(hostname)
 live="$HOME/.config/omarchy/shell.json"
 target="$repo/$host/.config/omarchy/shell.json"
 
-# Nothing to do on a host without its own package in the repo.
-[[ -d "$repo/$host/.config/omarchy" ]] || exit 0
-[[ -f "$live" ]] || { echo "pre-commit: live shell.json missing, skipping sync" >&2; exit 0; }
-
-# Never record a corrupted file.
-jq -e . "$live" >/dev/null 2>&1 || { echo "pre-commit: live shell.json is not valid JSON, skipping sync" >&2; exit 0; }
-
-if [[ ! -f "$target" ]] || ! cmp -s "$live" "$target"; then
+sync_in() {
   cp "$live" "$target"
   git add -- "$target"
-  echo "pre-commit: synced shell.json into $host/"
+  echo "pre-commit: recorded live shell.json into $host/"
+}
+
+# Nothing to do on a host without its own package in the repo.
+[[ -d "$repo/$host/.config/omarchy" ]] || exit 0
+[[ -f "$live" ]] || { echo "pre-commit: live shell.json missing, skipping check" >&2; exit 0; }
+
+# Never record a corrupted file.
+jq -e . "$live" >/dev/null 2>&1 || { echo "pre-commit: live shell.json is not valid JSON, skipping check" >&2; exit 0; }
+
+if [[ ${1:-} == "--sync" ]]; then
+  sync_in
+  exit 0
 fi
+
+[[ -f "$target" ]] || { echo "pre-commit: $host/shell.json not recorded yet; run: $repo/.githooks/pre-commit --sync" >&2; exit 1; }
+
+# Semantic compare: Omarchy re-serializes key order, so bytes can drift while
+# the config is unchanged. Equal-but-reformatted is re-recorded silently.
+if diff <(jq -S . "$live") <(jq -S . "$target") >/dev/null; then
+  if ! cmp -s "$live" "$target"; then
+    sync_in
+    echo "pre-commit: re-recorded shell.json (formatting only)"
+  fi
+  exit 0
+fi
+
+echo "pre-commit: $host/shell.json is out of sync with the live config; commit stopped." >&2
+echo "  incoming (< live) / outgoing (> repo):" >&2
+diff <(jq -S . "$live") <(jq -S . "$target") | head -40 >&2 || true
+echo "  record current live config: $repo/.githooks/pre-commit --sync" >&2
+exit 1
