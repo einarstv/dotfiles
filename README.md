@@ -48,6 +48,10 @@ voxtype status                            # expect: idle
 
 Not mid-recording, obviously — the restart kills a live dictation. Delete
 this section once every machine has migrated (luwei done 2026-11-02).
+Fresh machines stowed from `1e1eb67` on need none of this: there is no
+stale link to remove, `ExecStartPre` seeds `config.toml` (Norwegian) on
+first start, and "Adding a machine" step 7 (`groq.env`) is the only
+VoxType-specific step.
 
 
 ## Theme overlays: no Stow links
