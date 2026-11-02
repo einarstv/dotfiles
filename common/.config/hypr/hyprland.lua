@@ -22,6 +22,13 @@ require("hypr.bindings")
 require("hypr.looknfeel")
 require("hypr.autostart")
 
+-- Optional per-machine overrides (e.g. lisan/.config/hypr/host.lua); skipped
+-- on machines that don't ship one.
+local ok, err = pcall(require, "hypr.host")
+if not ok and not tostring(err):find("module 'hypr.host' not found", 1, true) then
+  error(err)
+end
+
 -- Toggle config flags dynamically.
 require("default.hypr.toggles")
 
