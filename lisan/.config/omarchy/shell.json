@@ -4,9 +4,9 @@
     "layout": {
       "center": [
         {
+          "id": "omarchy.clock",
           "format": "yyyy-MM-dd HH:mm",
           "formatAlt": "d MMMM 'W'ww yyyy",
-          "id": "omarchy.clock",
           "verticalFormat": "HH\n—\nmm"
         }
       ],
@@ -17,29 +17,16 @@
       ],
       "centerEnd": [
         {
+          "id": "omarchy.elsewhen",
           "cities": [
             {
-              "name": "Oslo",
-              "zone": "Europe/Oslo"
-            },
-            {
-              "name": "Delhi",
-              "zone": "Asia/Kolkata"
-            },
-            {
-              "name": "Tokyo",
-              "zone": "Asia/Tokyo"
-            },
-            {
-              "name": "Los Angeles",
-              "zone": "America/Los_Angeles"
-            },
-            {
-              "name": "New York",
-              "zone": "America/New_York"
+              "name": "Bergen",
+              "zone": "Europe/Oslo",
+              "lat": 60.39299,
+              "lon": 5.32415,
+              "region": "Vestland, NO"
             }
-          ],
-          "id": "omarchy.elsewhen"
+          ]
         },
         {
           "id": "omarchy.weather"
