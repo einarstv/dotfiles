@@ -66,15 +66,34 @@ silently skipping every generated config after it alphabetically —
 real files or absolute symlinks; version their content elsewhere in the
 repo and copy it in.
 
+## shell.json: synced at commit time, not Stow-linked
+
+Omarchy rewrites `~/.config/omarchy/shell.json` on every bar, plugin, or
+idle change (`atomicWrites: true` — temp file, then `rename()`), and
+`rename()` replaces a symlink instead of following it. A Stow link on the
+file survives only until the first such write, which silently swaps it for
+a plain file and leaves the repo copy stale (seen 2026-11-02: the `glassy`
+bar background and `xiaoshi.lock` enable existed only in the live file).
+
+So `<host>/.config/omarchy/shell.json` is a synced record, not a link:
+`.githooks/pre-commit` copies the live file in and stages it, so every
+commit snapshots the config the machine actually runs. Activate per
+machine:
+
+```sh
+git config core.hooksPath .githooks
+```
+
 ## Adding a machine
 
 1. Clone the repo to `~/dotfiles`.
 2. Create `<hostname>/.config/hypr/monitors.lua` with that machine's monitor setup.
 3. Move any existing `~/.config/hypr/*.lua` files that Stow would replace out of the way (Stow reports conflicts rather than overwriting).
 4. Run the stow command above and reload Hyprland (`hyprctl reload`).
-5. On a laptop, run `~/.local/bin/lid-screen-off-setup` (asks for sudo) so closing the lid turns the screen off instead of suspending.
-6. On lisan (or any machine using the dock), run `~/.local/bin/dock-hub-nosuspend-setup` (asks for sudo) — when the dock's GenesysLogic USB2 hub autosuspends, its RTL8153 ethernet NIC stalls and drops off the bus, killing all connectivity until it re-enumerates.
-7. VoxType dictation is remote-only via Groq: create `~/.config/voxtype/groq.env` with `VOXTYPE_WHISPER_API_KEY=<key>` (per-machine secret, not tracked). No local models needed. Language is pinned per variant in `common/.config/voxtype/config-{no,en}.toml`; `voxtype-lang` copies the chosen variant over `~/.config/voxtype/config.toml` (generated, not tracked) and restarts the daemon.
+5. Run `git config core.hooksPath .githooks` so commits sync the live `shell.json` into this host's package (see above).
+6. On a laptop, run `~/.local/bin/lid-screen-off-setup` (asks for sudo) so closing the lid turns the screen off instead of suspending.
+7. On lisan (or any machine using the dock), run `~/.local/bin/dock-hub-nosuspend-setup` (asks for sudo) — when the dock's GenesysLogic USB2 hub autosuspends, its RTL8153 ethernet NIC stalls and drops off the bus, killing all connectivity until it re-enumerates.
+8. VoxType dictation is remote-only via Groq: create `~/.config/voxtype/groq.env` with `VOXTYPE_WHISPER_API_KEY=<key>` (per-machine secret, not tracked). No local models needed. Language is pinned per variant in `common/.config/voxtype/config-{no,en}.toml`; `voxtype-lang` copies the chosen variant over `~/.config/voxtype/config.toml` (generated, not tracked) and restarts the daemon.
 
 If Stow reports conflicts for files it once linked (apps rewrote them into real files since), move those files aside and re-run stow rather than using `--adopt` blindly.
 

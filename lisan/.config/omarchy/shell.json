@@ -1,12 +1,12 @@
 {
   "bar": {
-    "background": "none",
+    "background": "glassy",
     "layout": {
       "center": [
         {
-          "id": "omarchy.clock",
           "format": "yyyy-MM-dd HH:mm",
           "formatAlt": "d MMMM 'W'ww yyyy",
+          "id": "omarchy.clock",
           "verticalFormat": "HH\n—\nmm"
         }
       ],
@@ -17,16 +17,16 @@
       ],
       "centerEnd": [
         {
-          "id": "omarchy.elsewhen",
           "cities": [
             {
-              "name": "Bergen",
-              "zone": "Europe/Oslo",
               "lat": 60.39299,
               "lon": 5.32415,
-              "region": "Vestland, NO"
+              "name": "Bergen",
+              "region": "Vestland, NO",
+              "zone": "Europe/Oslo"
             }
-          ]
+          ],
+          "id": "omarchy.elsewhen"
         },
         {
           "id": "omarchy.weather"
@@ -80,6 +80,16 @@
     "lock": 630,
     "screensaver": 600
   },
-  "plugins": [],
-  "version": 1
+  "plugins": [
+    {
+      "id": "xiaoshi.lock"
+    }
+  ],
+  "version": 1,
+  "disabledPlugins": [
+    "omarchy.lock"
+  ],
+  "cloneSourceRestores": [
+    "xiaoshi.lock"
+  ]
 }

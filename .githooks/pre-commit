@@ -1,0 +1,26 @@
+#!/bin/bash
+# Sync the live shell.json into this host's stow package before committing,
+# so every commit snapshots the config Omarchy actually runs. The repo copy
+# is a synced record, not a Stow link: Omarchy persists shell.json with
+# atomic temp-file-plus-rename writes, and rename() replaces a symlink
+# instead of following it. See README "shell.json: synced at commit time".
+
+set -euo pipefail
+
+repo=$(git rev-parse --show-toplevel)
+host=$(hostname)
+live="$HOME/.config/omarchy/shell.json"
+target="$repo/$host/.config/omarchy/shell.json"
+
+# Nothing to do on a host without its own package in the repo.
+[[ -d "$repo/$host/.config/omarchy" ]] || exit 0
+[[ -f "$live" ]] || { echo "pre-commit: live shell.json missing, skipping sync" >&2; exit 0; }
+
+# Never record a corrupted file.
+jq -e . "$live" >/dev/null 2>&1 || { echo "pre-commit: live shell.json is not valid JSON, skipping sync" >&2; exit 0; }
+
+if [[ ! -f "$target" ]] || ! cmp -s "$live" "$target"; then
+  cp "$live" "$target"
+  git add -- "$target"
+  echo "pre-commit: synced shell.json into $host/"
+fi
