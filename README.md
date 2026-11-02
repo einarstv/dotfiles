@@ -26,6 +26,30 @@ stow --no-folding common "$(hostname)"
 
 To remove the links: `stow -D --no-folding common "$(hostname)"`.
 
+## Migrating VoxType to the dual configs (machines stowed before 1e1eb67)
+
+`config.toml` is generated state now; the tracked file is gone. After
+pulling, its old Stow link dangles — and `cp -n` refuses to write through
+a dangling symlink (`cp: not writing through dangling symlink`), so the
+seed in `ExecStartPre` would fail and keep `voxtype.service` from starting.
+Remove the stale link before restarting, exactly in this order:
+
+```sh
+cd ~/dotfiles && git pull
+rm -f ~/.config/voxtype/config.toml \
+      ~/.config/voxtype/english.toml \
+      ~/.config/voxtype/*.bak
+stow --no-folding common "$(hostname)"
+systemctl --user daemon-reload
+systemctl --user restart voxtype.service  # ExecStartPre seeds config.toml (Norwegian)
+voxtype config get whisper.language       # expect: no
+voxtype status                            # expect: idle
+```
+
+Not mid-recording, obviously — the restart kills a live dictation. Delete
+this section once every machine has migrated (luwei done 2026-11-02).
+
+
 ## Theme overlays: no Stow links
 
 `omarchy theme set` copies `~/.config/omarchy/themes/<name>/` into
