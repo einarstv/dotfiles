@@ -12,6 +12,10 @@
 #   Herdr       — rewrites the whole [theme.custom] token section in
 #                 ~/.config/herdr/config.toml from Omarchy's colors.toml, then
 #                 reloads the running herdr server
+#   Helix       — installs ~/.config/helix/themes/omarchy.toml and sets
+#                 theme = "omarchy" in ~/.config/helix/config.toml (without
+#                 touching the rest of the file), then SIGUSR1-reloads any
+#                 running helix sessions
 #
 # Omarchy machines are skipped automatically (the built-in sync owns those).
 #
@@ -92,6 +96,10 @@ THEME_DIR="$STATE_DIR/current/theme"
 CLAUDE_B64=""
 [[ -f $THEME_DIR/claude.json ]] && CLAUDE_B64=$(base64 -w0 <"$THEME_DIR/claude.json")
 
+# Helix theme (self-contained: syntax rules + [palette]), same treatment.
+HELIX_B64=""
+[[ -f $THEME_DIR/helix.toml ]] && HELIX_B64=$(base64 -w0 <"$THEME_DIR/helix.toml")
+
 # Herdr [theme.custom] tokens <- colors.toml keys. Parallel arrays keep order.
 map_token=(accent panel_bg sidebar_bg active_row_bg selection_bg surface0 surface1
   surface_dim overlay0 overlay1 text subtext0 mauve green yellow red blue teal peach)
@@ -110,8 +118,8 @@ if [[ -f $THEME_DIR/colors.toml ]]; then
   ((${#pairs[@]} > 0)) && COLORS_JSON="{$(IFS=,; echo "${pairs[*]}")}"
 fi
 
-[[ -n $CLAUDE_B64 || -n $COLORS_JSON ]] || {
-  echo "Theme '$THEME_NAME' staged neither claude.json nor colors.toml — nothing to push." >&2
+[[ -n $CLAUDE_B64 || -n $COLORS_JSON || -n $HELIX_B64 ]] || {
+  echo "Theme '$THEME_NAME' staged neither claude.json, colors.toml nor helix.toml — nothing to push." >&2
   exit 1
 }
 
@@ -131,8 +139,8 @@ note_send() { # <headline> <body> [urgency] [expire-ms]
 # Variable assignments are injected first (printf %q), then the static body.
 # Runs under `bash -l -s` so PATH (e.g. ~/.local/bin for herdr) is set remotely.
 remote_script() {
-  printf 'CLAUDE_B64=%q\nDRY=%q\nCOLORS=%q\nTHEME_NAME=%q\n' \
-    "$CLAUDE_B64" "$DRY" "$COLORS_JSON" "$THEME_NAME"
+  printf 'CLAUDE_B64=%q\nDRY=%q\nCOLORS=%q\nHELIX_B64=%q\nTHEME_NAME=%q\n' \
+    "$CLAUDE_B64" "$DRY" "$COLORS_JSON" "$HELIX_B64" "$THEME_NAME"
   cat <<'REMOTE_BODY'
 set -u
 
@@ -211,6 +219,46 @@ PY
     else
       echo "herdr: not installed — config written for later"
     fi
+  fi
+fi
+
+# --- Helix -----------------------------------------------------------------------
+if [[ -n ${HELIX_B64:-} ]]; then
+  if ((DRY)); then
+    echo 'helix: would install theme + set theme = "omarchy" + reload'
+  else
+    mkdir -p "$HOME/.config/helix/themes"
+    if printf '%s' "$HELIX_B64" | base64 -d >"$HOME/.config/helix/themes/omarchy.toml" 2>/dev/null ||
+      printf '%s' "$HELIX_B64" | base64 -D >"$HOME/.config/helix/themes/omarchy.toml" 2>/dev/null; then
+      echo "helix: theme installed"
+    else
+      echo "helix: failed to decode theme"
+    fi
+    # Point config.toml at it without touching anything else: replace a
+    # top-level theme key in place, else prepend one — a top-level key must
+    # stay ahead of the first [section] header to remain top-level.
+    cfg="$HOME/.config/helix/config.toml"
+    if [[ ! -f $cfg ]]; then
+      printf 'theme = "omarchy"\n' >"$cfg" && echo "helix: config created + theme set"
+    elif awk '/^[[:space:]]*\[/ {exit 1} /^[[:space:]]*theme[[:space:]]*=/ {found = 1; exit} END {exit found ? 0 : 1}' "$cfg"; then
+      t=$(mktemp "$cfg.XXXXXX") &&
+        awk '!done && !hdr && /^[[:space:]]*\[/ {hdr = 1}
+             !done && !hdr && /^[[:space:]]*theme[[:space:]]*=/ {print "theme = \"omarchy\""; done = 1; next}
+             {print}' "$cfg" >"$t" &&
+        mv "$t" "$cfg" && echo "helix: theme set"
+    else
+      t=$(mktemp "$cfg.XXXXXX") &&
+        { printf 'theme = "omarchy"\n'; cat "$cfg"; } >"$t" &&
+        mv "$t" "$cfg" && echo "helix: theme set (prepended)"
+    fi
+    # SIGUSR1 makes running sessions re-read their config, like omarchy-restart-helix.
+    if pgrep -x helix >/dev/null 2>&1 || pgrep -x hx >/dev/null 2>&1; then
+      pkill -USR1 -x helix 2>/dev/null
+      pkill -USR1 -x hx 2>/dev/null
+      echo "helix: reloaded"
+    fi
+    command -v helix >/dev/null 2>&1 || command -v hx >/dev/null 2>&1 ||
+      echo "helix: not installed — config written for later"
   fi
 fi
 REMOTE_BODY
