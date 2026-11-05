@@ -9,7 +9,7 @@ Each top-level directory is a Stow package that mirrors `$HOME`.
 | Package    | Contents |
 |------------|----------|
 | `common/`  | Shared config, used on every machine: `~/.config/hypr/*` (except `monitors.lua`), `~/.config/kitty/kitty.conf`, `~/.config/omarchy/{backgrounds,branding,defaults,extensions,hooks,plugins,themed}`, `~/.local/bin/` helper scripts (lid, voxtype, workspace layout, reminders, theme sync) |
-| `<host>/`  | Machine-specific files, one package per hostname. Currently `lisan/` and `luwei/` with `monitors.lua` and `shell.json` (lisan also has `.local/bin/dock-hub-nosuspend-setup`) |
+| `<host>/`  | Machine-specific files, one package per hostname. Currently `lisan/` and `luwei/` with `monitors.lua` and `shell.json` (lisan also has `.local/bin/dock-hub-nosuspend-setup` and `.config/omarchy/hooks/post-boot.d/blank-internal-monitor`) |
 
 Rule of thumb: each setting lives in exactly one place. Shared settings go in `common/`; a host package holds only what genuinely differs.
 
@@ -122,6 +122,38 @@ died with the omarchy-screensaver 1.3.1 update (Oct 2026): the screensaver is
 now a native layer-shell overlay, which is not a Hyprland window, so it
 produces no window events to watch. Old diagnostics may remain in
 `~/.local/state/omarchy/screensaver-flash.log`.
+
+## Docked laptop: blank the internal panel (lisan)
+
+Booting with the dock monitor connected should leave the ThinkPad panel dark —
+off entirely, not lit with a frozen boot logo. Two pieces:
+
+- **"Laptop Display Off" toggle** (Omarchy Hardware menu): keeps eDP-1
+  `disabled = true` through the state flag
+  `~/.local/state/omarchy/toggles/hypr/internal-monitor-disable.lua`. Omarchy
+  clears it automatically when booting without an external display, and the
+  Hardware menu's "Laptop Display On" reverses it anytime. Runtime state, not
+  tracked here.
+- **`lisan/.config/omarchy/hooks/post-boot.d/blank-internal-monitor`**: a
+  panel Hyprland never enables is never powered down — the driver runs its
+  panel-off sequence (backlight, panel power) only when an *enabled* output is
+  disabled. So after the desktop starts, the hook briefly enables eDP-1 and
+  disables it again, which properly cuts power. Without it, the firmware's
+  boot logo stays lit on the panel for the entire session.
+
+The panel still shows the Lenovo logo from power-on until the desktop starts:
+that part is drawn by the firmware, before Linux runs.
+
+**TODO, not tried yet**: BIOS (F1 at boot) → **Config → Display → Boot Display
+Device** → pick the Digital/Dock option. That should send boot output to the
+dock monitor instead, so the panel never lights at all.
+
+Dead end, don't re-test: `i915.enable_psr=0` on the kernel cmdline (drop-in
+`/etc/limine-entry-tool.d/psr.conf` + `limine-mkinitcpio`) made no difference —
+the ghost frame is the driver never taking ownership, not panel self-refresh.
+Removed 2026-11-05. Caveat: the one verified-black reboot ran with the param
+active; if a docked reboot ends on a frozen frame instead, PSR was load-bearing
+for the disable path after all — re-add the drop-in and rebuild.
 
 ## Adding a file
 

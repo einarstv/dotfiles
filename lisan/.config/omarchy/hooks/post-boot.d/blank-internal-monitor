@@ -1,0 +1,22 @@
+#!/bin/bash
+
+# omarchy:summary=Blank the laptop panel when it runs disabled with an external monitor
+#
+# A panel Hyprland never enables is never powered down by the driver: it keeps
+# showing the firmware boot logo forever. Enabling it once makes i915 take
+# ownership of the panel, so the disable that follows runs the real power-off
+# sequence (backlight off, panel off) and the screen goes properly black.
+
+FLAG="$HOME/.local/state/omarchy/toggles/hypr/internal-monitor-disable.lua"
+
+[[ -f $FLAG ]] || exit 0
+
+INTERNAL=$(omarchy-hyprland-monitor-laptop)
+[[ -n $INTERNAL ]] || exit 0
+
+# Only kick the panel when another display is actually driving the session.
+omarchy-hyprland-monitor-external-active || exit 0
+
+hyprctl eval "hl.monitor({ output = \"$INTERNAL\", disabled = false })" >/dev/null 2>&1 || exit 0
+sleep 2
+hyprctl eval "hl.monitor({ output = \"$INTERNAL\", disabled = true })" >/dev/null 2>&1 || true
