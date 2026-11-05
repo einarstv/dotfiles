@@ -22,8 +22,15 @@
               "lat": 60.39299,
               "lon": 5.32415,
               "name": "Bergen",
+              "people": [
+                "Einar"
+              ],
               "region": "Vestland, NO",
               "zone": "Europe/Oslo"
+            },
+            {
+              "name": "Beijing",
+              "zone": "Asia/Shanghai"
             }
           ],
           "id": "omarchy.elsewhen"
@@ -76,6 +83,20 @@
     },
     "position": "top"
   },
+  "cloneSourceRestores": [
+    "xiaoshi.lock"
+  ],
+  "disabledPlugins": [
+    "omarchy.lock"
+  ],
+  "dock": {
+    "autohide": true,
+    "pinned": [
+      "chromium",
+      "org.gnome.Nautilus",
+      "kitty"
+    ]
+  },
   "idle": {
     "lock": 630,
     "screensaver": 600
@@ -85,11 +106,5 @@
       "id": "xiaoshi.lock"
     }
   ],
-  "version": 1,
-  "disabledPlugins": [
-    "omarchy.lock"
-  ],
-  "cloneSourceRestores": [
-    "xiaoshi.lock"
-  ]
+  "version": 1
 }
