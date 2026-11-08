@@ -96,6 +96,51 @@ o.rebind("SUPER + A", "Agent", "omarchy-agent") -- was: Select all
 hl.unbind("SUPER + SHIFT + S") -- was: Google Maps
 o.bind("SUPER + SHIFT + S", "Move window to scratchpad", hl.dsp.window.move({ workspace = "special:scratchpad", follow = false }))
 
+-- Claude Code in the scratchpad console on SUPER + CTRL + S (replaces Share;
+-- the share menu stays in the root menu). SUPER + S keeps opening the default
+-- agent (OpenCode) through the console's seeding in hyprland.lua; this key
+-- asks the seeding for Claude when it opens the uncreated console, starts
+-- Claude directly when the console already exists (the seeding only fires on
+-- creation, so it can never double-spawn), and toggles Claude's console once
+-- Claude is running. Claude's window has its own org.omarchy.claude class
+-- (every agent omarchy-agent launches shares org.omarchy.agent), which is what
+-- the focus below matches on.
+o.rebind("SUPER + CTRL + S", "Claude Code (scratchpad)", function()
+  local claude = nil
+  for _, window in ipairs(hl.get_workspace_windows("special:scratchpad")) do
+    if window.class == "org.omarchy.claude" then
+      claude = window
+      break
+    end
+  end
+
+  local ws = hl.get_workspace("special:scratchpad")
+  local visible = ws and ws.visible
+
+  if claude then
+    -- Toggle Claude's console: close when open, show and focus when hidden.
+    hl.dispatch(hl.dsp.workspace.toggle_special("scratchpad"))
+    if not visible then
+      hl.dispatch(hl.dsp.focus({ window = "address:" .. claude.address }))
+    end
+  elseif ws then
+    -- The console exists, holding other windows (e.g. OpenCode from SUPER + S)
+    -- or empty: open it when hidden and start Claude directly.
+    if not visible then
+      hl.dispatch(hl.dsp.workspace.toggle_special("scratchpad"))
+    end
+    hl.exec_cmd(
+      "omarchy-launch-tui --app-id=org.omarchy.claude omarchy-agent --inline --agent claude",
+      { workspace = "special:scratchpad silent" }
+    )
+  else
+    -- No console yet: open it and let the seeding start Claude (the flag
+    -- switches it from the default agent for this one opening).
+    scratchpad_seed_agent = "claude"
+    hl.dispatch(hl.dsp.workspace.toggle_special("scratchpad"))
+  end
+end)
+
 -- YouTube webapp on SUPER + Y (plain SUPER + Y was unbound; moved from SUPER + SHIFT + Y).
 hl.unbind("SUPER + SHIFT + Y") -- was: YouTube
 o.bind("SUPER + Y", "YouTube", { webapp = "https://youtube.com/" })

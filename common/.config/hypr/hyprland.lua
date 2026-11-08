@@ -113,9 +113,21 @@ qc_apply()
 -- Seed the console the first time it opens. on_created_empty in a workspace
 -- rule is deprecated since Hyprland 0.57; the replacement is a workspace.created
 -- handler that checks the new workspace's .is_empty field.
+--
+-- SUPER + S opens the default agent (OpenCode). The Claude keybinding in
+-- bindings.lua sets scratchpad_seed_agent when it opens the still-uncreated
+-- console; the flag is consumed here, so that opening seeds Claude instead --
+-- exactly one window, whichever key opened it.
+scratchpad_seed_agent = nil
+
 hl.on("workspace.created", function(ws)
   if ws and ws.name == "special:scratchpad" and ws.is_empty then
-    hl.dispatch(hl.dsp.exec_cmd("[workspace special:scratchpad silent] omarchy-agent"))
+    if scratchpad_seed_agent == "claude" then
+      scratchpad_seed_agent = nil
+      hl.dispatch(hl.dsp.exec_cmd("[workspace special:scratchpad silent] omarchy-launch-tui --app-id=org.omarchy.claude omarchy-agent --inline --agent claude"))
+    else
+      hl.dispatch(hl.dsp.exec_cmd("[workspace special:scratchpad silent] omarchy-agent"))
+    end
   end
 end)
 
