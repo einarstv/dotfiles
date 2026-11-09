@@ -145,6 +145,10 @@ end)
 hl.unbind("SUPER + SHIFT + Y") -- was: YouTube
 o.bind("SUPER + Y", "YouTube", { webapp = "https://youtube.com/" })
 
+-- File manager on SUPER + E (the Windows habit; plain SUPER + E was unbound,
+-- same action as the SUPER + SHIFT + F default).
+o.bind("SUPER + E", "File manager", { omarchy = "nautilus" })
+
 -- Dictation: one daemon, one mode-aware key, one pinned language.
 -- ALT + SPACE records while held (default) or toggles on tap, per the mode
 -- file flipped by the bar mic icon's right click (voxtype-chord /
